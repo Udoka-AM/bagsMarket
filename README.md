@@ -1,5 +1,4 @@
 # bagsMarkets
-
 bagsMarkets is a market-intelligence and trading operations workspace built around Bags, Solana, and automated agent workflows.
 
 ## Stack
@@ -39,6 +38,4 @@ bagsMarkets is a market-intelligence and trading operations workspace built arou
 3. Add the NestJS backend and Postgres schema.
 4. Build the first user flows and analytics events.
 
-## Commit and push
 
-When you’re ready, commit these files locally and push them to `origin/main`.
