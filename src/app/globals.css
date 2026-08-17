@@ -22,6 +22,28 @@
   --ring: 215 84% 32%;
 }
 
+/* tailwind.config.ts sets darkMode: ["class"], so the .dark class on <html>
+   swaps the palette. themeScript in the root layout applies it pre-paint. */
+.dark {
+  --background: 222.2 47.4% 6%;
+  --foreground: 210 40% 96%;
+  --card: 222.2 44% 9.5%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222.2 44% 9.5%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 213 94% 68%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 24 90% 20%;
+  --accent-foreground: 32 100% 88%;
+  --border: 217.2 32.6% 20%;
+  --input: 217.2 32.6% 20%;
+  --ring: 213 94% 68%;
+}
+
 * {
   @apply border-border;
 }
@@ -34,6 +56,6 @@ body {
   @apply bg-background text-foreground antialiased;
   background-image:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 30%),
-    radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 247, 250, 1));
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.12), transparent 28%);
+  background-attachment: fixed;
 }

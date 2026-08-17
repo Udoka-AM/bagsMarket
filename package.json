@@ -2,18 +2,26 @@
   "name": "bagsmarkets",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "api:dev": "npm run start:dev --workspace @bagsmarkets/api",
+    "api:build": "npm run build --workspace @bagsmarkets/api"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-slot": "1.2.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "0.441.0",
     "next": "16.2.12",
+    "posthog-js": "1.417.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tailwind-merge": "3.3.1",

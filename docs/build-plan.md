@@ -4,7 +4,7 @@ This plan describes the path from the current scaffold to a finished product.
 
 ## Phase 0: Foundation
 
-Status: in progress
+Status: complete
 
 Goals:
 
@@ -13,14 +13,18 @@ Goals:
 - Verify that the web app builds
 - Keep the backend scaffold in place for future expansion
 
-Already complete:
+Complete:
 
 - Next.js frontend scaffold
 - Tailwind and shadcn/ui-ready setup
-- NestJS backend placeholder
+- NestJS backend placeholder, building via `npm run api:build`
+- npm workspaces wiring so `apps/*` installs from the repo root
+- Working `lint` and `typecheck` scripts
 - Basic docs folder
 
 ## Phase 1: Product Shell
+
+Status: complete
 
 Goals:
 
@@ -32,9 +36,17 @@ Goals:
 
 Deliverables:
 
-- Header, sidebar, and dashboard layout
-- Login or wallet connection entry point
-- PostHog page and event instrumentation
+- Header, sidebar, and dashboard layout under the `(app)` route group
+- Responsive navigation with a Radix-backed drawer below `lg`
+- Wallet connection entry point (instrumented; the adapter lands in Phase 3)
+- PostHog page and event instrumentation, off unless a key is configured
+- `.env.example` covering both the web app and the API
+- Origin allowlist for API CORS, replacing the reflect-any-origin default
+
+Not included, and deliberately deferred:
+
+- Real authentication. The `(app)` layout is the single place a gate will go,
+  but there is no session or identity until the API owns one.
 
 ## Phase 2: Core Data Model
 

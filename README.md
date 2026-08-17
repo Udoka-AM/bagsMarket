@@ -23,19 +23,43 @@ bagsMarkets is a market-intelligence and trading operations workspace built arou
 - Analytics: PostHog
 - Deployment: Vercel + Railway or AWS
 
-## What’s in this scaffold
+## What’s here
 
-- A Next.js App Router application shell
-- TypeScript configuration and path aliases
-- Tailwind setup ready for shadcn/ui components
-- A starter landing page for the product
-- A reusable button and card component
+- A Next.js App Router app shell: sidebar, header, responsive drawer, light/dark theme
+- Product routes for dashboard, launches, signals, alerts, and workflows — routed
+  and styled, but not yet connected to any data source
+- A NestJS service under `apps/api` with a health endpoint and env-driven config
+- PostHog instrumentation that stays off until a key is set
+- npm workspaces, with `lint`, `typecheck`, and both builds passing
+
+## Getting started
+
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+The web app runs on `http://localhost:3000`. To run the API alongside it:
+
+```bash
+npm run api:dev
+```
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Next.js dev server |
+| `npm run build` | Production build of the web app |
+| `npm run lint` | ESLint across the repo |
+| `npm run typecheck` | `tsc --noEmit` for the web app |
+| `npm run api:dev` | NestJS service in watch mode |
+| `npm run api:build` | Build the NestJS service |
 
 ## Next steps
 
-1. Install dependencies.
-2. Wire the app to Bags, Solana, and OpenAI services.
-3. Add the NestJS backend and Postgres schema.
-4. Build the first user flows and analytics events.
+See the [build plan](./docs/build-plan.md). Phases 0 and 1 are complete; Phase 2
+is the Postgres schema and shared domain types.
 
 
