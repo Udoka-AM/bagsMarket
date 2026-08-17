@@ -45,13 +45,18 @@ This document defines the target stack for bagsMarkets. Some pieces are already 
 
 - Node.js
 - NestJS
-- PostgreSQL
+- Supabase (hosted PostgreSQL + Auth)
+- Drizzle ORM and `drizzle-kit` migrations
 - Redis
 
 ### Data and Search
 
-- PostgreSQL as the system of record
-- pgvector for embeddings and semantic search
+- Supabase PostgreSQL as the system of record
+- Drizzle as the schema authority — not the Supabase dashboard, and not the
+  Supabase CLI migration workflow
+- Row Level Security enabled on every table as a backstop behind API-level checks
+- pgvector for embeddings and semantic search, enabled in the first migration and
+  left unused until Phase 5
 
 ### Bags and Solana
 
@@ -88,17 +93,19 @@ This document defines the target stack for bagsMarkets. Some pieces are already 
 
 ## Environment Variables
 
-The repository will eventually need environment variables for:
+See `.env.example` for the authoritative list. The Supabase-specific ones:
 
-- `DATABASE_URL`
-- `REDIS_URL`
-- `OPENAI_API_KEY`
-- `HELIUS_RPC_URL`
-- `BAGS_API_KEY`
-- `SOLANA_CLUSTER`
-- `POSTHOG_KEY`
-- `X_API_KEY`
-- `GITHUB_TOKEN`
+| Variable | Where | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | web | Safe to expose |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | web | Safe to expose; RLS is what constrains it |
+| `SUPABASE_SERVICE_ROLE_KEY` | api | **Bypasses RLS.** Server-side only, never `NEXT_PUBLIC_` |
+| `SUPABASE_JWT_SECRET` | api | Verifies incoming user tokens |
+| `DATABASE_URL` | api | Pooled connection, for the running service |
+| `DIRECT_URL` | migrations | Unpooled; `drizzle-kit` needs a direct connection |
+
+Plus `REDIS_URL`, `OPENAI_API_KEY`, `HELIUS_RPC_URL`, `BAGS_API_KEY`,
+`SOLANA_CLUSTER`, `POSTHOG_KEY`, `X_API_KEY`, and `GITHUB_TOKEN`.
 
 ## Notes
 

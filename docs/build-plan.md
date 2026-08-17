@@ -50,22 +50,32 @@ Not included, and deliberately deferred:
 
 ## Phase 2: Core Data Model
 
+Status: in progress
+
+The decisions behind this phase — Supabase as host, wallet-only identity,
+per-user ownership, Drizzle as schema authority — are recorded in
+[Architecture Overview](./architecture.md#phase-2-decisions) with their
+trade-offs. Read that before changing the schema.
+
 Goals:
 
-- Design the Postgres schema
+- Design the Postgres schema on Supabase
 - Add migrations and seed data
 - Define shared domain types
-- Introduce pgvector for embeddings and semantic search
+- Enable pgvector for later semantic search
 
 Deliverables:
 
-- Users
-- Wallets
-- Launches
-- Claims
-- Alerts
-- Jobs
-- Activity feed
+- `profiles` (hangs off Supabase `auth.users`)
+- `wallets`
+- `launches`
+- `fee_shares`
+- `claims`
+- `alerts` and `alert_events`
+- `jobs`
+- `activity`
+- RLS policies on every table
+- `packages/db` (Drizzle schema, migrations) and `packages/types` (API contracts)
 
 ## Phase 3: Bags and Solana Integration
 

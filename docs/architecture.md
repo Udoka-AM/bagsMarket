@@ -16,8 +16,10 @@ The system is designed around four ideas:
 ```mermaid
 flowchart LR
   U[User] --> W[Next.js Web App]
-  W --> A[API Layer / NestJS]
-  A --> P[(PostgreSQL)]
+  W -->|wallet sign-in| SA[Supabase Auth]
+  W -->|JWT| A[API Layer / NestJS]
+  A -->|verify JWT| SA
+  A --> P[(Supabase Postgres)]
   A --> R[(Redis)]
   A --> B[Bags SDK]
   A --> S[Solana RPC / Helius]
@@ -28,7 +30,11 @@ flowchart LR
   Q --> O
   Q --> M
   Q --> B
+  Q --> P
 ```
+
+The browser talks to Supabase for one thing only: proving wallet ownership at
+sign-in. Every read and write of application data goes through the API.
 
 ## Core Layers
 
@@ -41,13 +47,21 @@ flowchart LR
 ### API Layer
 
 - NestJS is the service boundary for domain logic.
-- It will own authentication, request validation, data aggregation, and orchestration into external services.
+- It verifies the Supabase JWT on every request and resolves it to a profile.
+  Supabase issues identity; the API decides what that identity may do.
+- It owns request validation, data aggregation, and orchestration into external services.
 - It should expose stable contracts to the web app and any future clients.
 
 ### Data Layer
 
-- PostgreSQL stores users, wallets, launch metadata, fee-sharing records, alerts, jobs, and analytics-ready domain objects.
+- Supabase-hosted PostgreSQL stores wallets, launch metadata, fee-sharing records, alerts, jobs, and analytics-ready domain objects.
+- Supabase Auth owns `auth.users`. We do not create or manage that table; our own
+  `profiles` table hangs off it by foreign key.
+- Drizzle owns the schema definition and generates the SQL migrations. Supabase
+  is the host, not the schema authority — there is exactly one migration system.
 - pgvector supports semantic retrieval for research, summaries, and similarity matching.
+  The extension is enabled up front; no embedding tables exist until there is
+  content worth embedding.
 
 ### Cache and Jobs
 
@@ -94,6 +108,77 @@ flowchart LR
 - Enrichment
 - Notifications
 - Monitoring and retries
+
+## Phase 2 Decisions
+
+These were settled before the schema was written. Each names the trade-off
+accepted, so a later reader can tell what was chosen versus what was defaulted.
+
+### Identity is a Solana wallet
+
+Sign-in is wallet-only, through Supabase Auth's `signInWithWeb3` with the Solana
+provider. There is no password or OAuth stack.
+
+- **Why:** this is a Solana-native operator tool. Every user has a wallet, so an
+  email/password system would be work that serves nobody.
+- **Accepted cost:** no wallet, no account. Supabase also notes that Web3
+  accounts carry no email or phone, which makes automated signup abuse cheap —
+  so CAPTCHA and rate limiting are required before any public launch, not after.
+- **Consequence:** `auth.users` rows are created by Supabase. Our `profiles`
+  table references them and holds product-owned fields.
+
+### Ownership is per user, enforced twice
+
+Every domain row carries an owning `profile_id`. There is no organization or
+team concept yet.
+
+- **Why:** ownership columns are the expensive retrofit; team sharing is not.
+  Adding `org_id` later does not require rewriting existing rows.
+- **How:** the API always filters by the authenticated user explicitly, *and*
+  RLS policies are enabled on every table. The API connects with a privileged
+  role, so RLS does not constrain it — the policies exist to contain anything
+  that reaches the database by another path.
+- **Accepted cost:** two places enforce the same rule, and they can drift. The
+  API's own predicate is the one that must be correct; RLS is the backstop.
+
+### Drizzle owns the schema
+
+Drizzle defines the tables and `drizzle-kit` generates SQL migrations, applied
+against the Supabase connection string.
+
+- **Why:** typed `vector` columns for pgvector, and SQL-shaped queries that stay
+  legible as the joins get wider.
+- **Accepted cost:** we do not use Supabase's own migration workflow, so the
+  Supabase dashboard is not a safe place to edit schema. Schema changes go
+  through Drizzle or they do not happen.
+
+### The web app never queries Postgres
+
+Next server components call the API. They do not open database connections, and
+they do not use `supabase-js` for data.
+
+- **Why:** `architecture.md` already put domain logic behind the API boundary.
+  Supabase makes direct access tempting precisely because it is easy, which is
+  what makes the rule worth stating rather than assuming.
+- **The one exception:** the browser uses `supabase-js` to run the wallet
+  sign-in handshake and hold the session. That is authentication, not data.
+
+### Shared types are API contracts, not database rows
+
+`packages/types` holds hand-authored request and response types. `packages/db`
+holds the Drizzle schema and is consumed only by server-side code.
+
+- **Why:** the shape we store and the shape we serve should be free to diverge.
+  Exporting inferred row types to the browser would weld them together and leak
+  columns the API never intends to expose.
+
+### pgvector is enabled but unused
+
+The first migration creates the extension. No embedding column exists yet.
+
+- **Why:** enabling an extension in a live database later is a migration nobody
+  wants to schedule, but designing an embedding schema before the corpus exists
+  guarantees rework. Phase 5 designs it against real content.
 
 ## Key Design Decisions
 
