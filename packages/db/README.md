@@ -41,6 +41,34 @@ They live in `0001_extensions_triggers_rls.sql`, which is maintained by hand and
 registered manually in `migrations/meta/_journal.json`. **Adding a table means
 editing that file too** — a new table with RLS left off is an open table.
 
+## Tests
+
+The RLS policies are the security boundary, so they are tested against a real
+Postgres rather than reasoned about.
+
+```bash
+docker compose up -d postgres
+npm test
+```
+
+`test/global-setup.ts` recreates the parts of Supabase our migrations assume
+(the `auth` schema, `auth.uid()`, the `anon`/`authenticated` roles), applies
+**every migration with drizzle's own migrator**, then grants the table
+privileges Supabase grants by default.
+
+Two details that make the suite meaningful rather than decorative:
+
+- **The grants matter.** Without them, `authenticated` queries would fail on a
+  missing privilege and every isolation test would pass for the wrong reason.
+  One test asserts the grants exist, guarding the rest.
+- **Each test runs in a rolled-back transaction.** `SET LOCAL` is silently
+  ignored outside a transaction, so a test written without one would pass while
+  proving nothing.
+
+The suite has been checked against a deliberately broken policy
+(`ALTER TABLE launches DISABLE ROW LEVEL SECURITY`) and correctly fails five
+tests, including a cross-tenant delete that succeeds when RLS is off.
+
 ## Ownership model
 
 Every domain row carries `profile_id`. Enforcement happens twice:

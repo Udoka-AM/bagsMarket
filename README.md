@@ -56,10 +56,30 @@ npm run api:dev
 | `npm run typecheck` | `tsc --noEmit` for the web app |
 | `npm run api:dev` | NestJS service in watch mode |
 | `npm run api:build` | Build the NestJS service |
+| `npm run packages:build` | Compile `packages/*` (run automatically by the API scripts) |
+| `npm run db:generate` | Diff the Drizzle schema into a new migration |
+| `npm run db:migrate` | Apply pending migrations |
+| `npm run db:studio` | Browse the database |
+| `npm test` | RLS policy tests against a real Postgres (needs `docker compose up -d postgres`) |
+
+## Tests and CI
+
+```bash
+docker compose up -d postgres
+npm test
+```
+
+GitHub Actions runs lint, typechecks, the RLS suite against a throwaway Postgres,
+and both builds on every push and pull request. See
+[.github/workflows/ci.yml](.github/workflows/ci.yml).
 
 ## Next steps
 
-See the [build plan](./docs/build-plan.md). Phases 0 and 1 are complete; Phase 2
-is the Postgres schema and shared domain types.
+See the [build plan](./docs/build-plan.md). Phases 0 and 1 are complete, and
+Phase 2 has landed: the schema is live on Supabase with RLS, and `GET /jobs` →
+`/workflows` proves the web → API → Postgres path end to end.
+
+Phase 3 is next — the Bags SDK, Solana wallet connection, and the wallet sign-in
+flow that finally gives the app a real identity to hang data off.
 
 

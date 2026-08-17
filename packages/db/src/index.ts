@@ -5,6 +5,28 @@ import * as schema from "./schema";
 export * from "./schema";
 export { schema };
 
+// Re-exported so consumers build queries without taking their own dependency on
+// drizzle-orm — this package stays the single point where the ORM is pinned.
+export {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  ne,
+  not,
+  or,
+  sql
+} from "drizzle-orm";
+
 export type Database = ReturnType<typeof createDatabase>;
 
 /**

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes an in-flight run obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # pgvector, not stock postgres: migration 0001 creates the extension.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bagsmarkets_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bagsmarkets_test
+      # No Supabase or API variables here on purpose: src/lib/env.ts defaults
+      # every public value, and /workflows is force-dynamic so nothing calls the
+      # API at build time. Add them when a build genuinely needs them.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # `npm ci` over `npm install`: it fails loudly when package-lock.json and
+      # package.json disagree, instead of quietly resolving something new.
+      - run: npm ci
+
+      # The API and the web app both import the workspace packages, so these
+      # must be compiled before anything that typechecks against them.
+      - run: npm run packages:build
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run typecheck --workspace @bagsmarkets/db
+      - run: npm run typecheck --workspace @bagsmarkets/types
+
+      # Applies every migration to a clean database before asserting against it,
+      # so a migration that would fail on Supabase fails here first.
+      - run: npm run test
+
+      - run: npm run build
+
+      - run: npm run api:build

@@ -12,13 +12,17 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "api:dev": "npm run start:dev --workspace @bagsmarkets/api",
-    "api:build": "npm run build --workspace @bagsmarkets/api",
+    "api:dev": "npm run packages:build && npm run start:dev --workspace @bagsmarkets/api",
+    "api:build": "npm run packages:build && npm run build --workspace @bagsmarkets/api",
     "db:generate": "npm run generate --workspace @bagsmarkets/db",
     "db:migrate": "npm run migrate --workspace @bagsmarkets/db",
-    "db:studio": "npm run studio --workspace @bagsmarkets/db"
+    "db:studio": "npm run studio --workspace @bagsmarkets/db",
+    "packages:build": "npm run build --workspace @bagsmarkets/types && npm run build --workspace @bagsmarkets/db",
+    "test": "npm run test --workspace @bagsmarkets/db",
+    "test:db": "npm run test --workspace @bagsmarkets/db"
   },
   "dependencies": {
+    "@bagsmarkets/types": "*",
     "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-slot": "1.2.3",
     "class-variance-authority": "0.7.1",

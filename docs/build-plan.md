@@ -60,9 +60,15 @@ trade-offs. Read that before changing the schema.
 Goals:
 
 - Design the Postgres schema on Supabase
-- Add migrations and seed data
+- Add migrations
 - Define shared domain types
 - Enable pgvector for later semantic search
+- Prove the web -> API -> Postgres path end to end
+
+Deferred: **seed data**. Every domain table hangs off `profiles`, which hangs off
+Supabase's `auth.users`. Seeding today means fabricating auth users, and that
+scaffolding gets discarded the moment wallet sign-in lands. Revisit in Phase 3,
+when there is a real identity to seed against.
 
 Deliverables:
 
@@ -76,6 +82,9 @@ Deliverables:
 - `activity`
 - RLS policies on every table
 - `packages/db` (Drizzle schema, migrations) and `packages/types` (API contracts)
+- First vertical slice: `GET /jobs` reads Postgres through Drizzle, and
+  `/workflows` renders it. `jobs` was chosen because its `profile_id` is
+  nullable, so the slice does not depend on authentication existing first.
 
 ## Phase 3: Bags and Solana Integration
 
@@ -140,6 +149,18 @@ Deliverables:
 - Operational dashboards
 
 ## Phase 7: Production Hardening
+
+Partially done already. Two items were pulled forward because both get more
+expensive the longer they wait:
+
+- **CI** (`.github/workflows/ci.yml`) — lint, typechecks, tests, and both builds
+  on every push and pull request.
+- **RLS policy tests** — the security boundary is asserted against a real
+  Postgres, with migrations applied from empty by drizzle's own migrator. Their
+  ability to detect a broken policy has itself been verified.
+
+Still outstanding: API and web unit tests, rate limiting, abuse prevention, and
+the deployment runbook.
 
 Goals:
 
