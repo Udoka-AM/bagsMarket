@@ -1,6 +1,8 @@
 import { ArrowRight, BarChart3, Coins, Workflow } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 const capabilities = [
   {
@@ -30,6 +32,7 @@ export default function Home() {
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               Next.js + TypeScript + Tailwind scaffold
             </div>
+            <Badge>shadcn/ui-ready</Badge>
             <div className="space-y-4">
               <h1 className="max-w-2xl text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl">
                 bagsMarkets for Bags, Solana, and trading intelligence.
@@ -40,11 +43,11 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button className="h-12 rounded-full px-6">
+              <Button size="lg">
                 Start building
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button variant="outline" className="h-12 rounded-full px-6">
+              <Button variant="outline" size="lg">
                 Review the stack
               </Button>
             </div>
@@ -74,6 +77,7 @@ export default function Home() {
                 </p>
               </CardContent>
             </Card>
+            <Separator className="my-2" />
           </div>
         </div>
       </section>
