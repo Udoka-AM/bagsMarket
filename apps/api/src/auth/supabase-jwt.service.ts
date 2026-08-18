@@ -6,8 +6,19 @@ export type AuthenticatedUser = {
   /** Supabase auth.users.id — the value auth.uid() returns, and our profiles PK. */
   id: string;
   email: string | null;
-  /** How the user proved identity: "email", "solana", etc. */
+  /** How the user proved identity: "web3", "email", etc. */
   provider: string | null;
+  /**
+   * The Solana address that signed in, for web3 sessions.
+   *
+   * Supabase puts it in user_metadata.custom_claims.address — the token carries
+   * no dedicated wallet claim, so this is the only place it appears.
+   */
+  walletAddress: string | null;
+};
+
+type Web3UserMetadata = {
+  custom_claims?: { address?: string; chain?: string };
 };
 
 @Injectable()
@@ -55,11 +66,14 @@ export class SupabaseJwtService {
     }
 
     const appMetadata = payload.app_metadata as { provider?: string } | undefined;
+    const userMetadata = payload.user_metadata as Web3UserMetadata | undefined;
+    const address = userMetadata?.custom_claims?.address;
 
     return {
       id: payload.sub,
       email: typeof payload.email === "string" ? payload.email : null,
-      provider: appMetadata?.provider ?? null
+      provider: appMetadata?.provider ?? null,
+      walletAddress: typeof address === "string" && address.length > 0 ? address : null
     };
   }
 }

@@ -107,6 +107,17 @@ export type ActivityEntry = {
   occurredAt: IsoDateTime;
 };
 
+/**
+ * What `GET /me` returns: the caller's profile plus every wallet linked to it.
+ *
+ * Returned together because the web app needs both on first load — the profile
+ * to know who you are, the wallets to show which address you signed in with.
+ */
+export type Me = {
+  profile: Profile;
+  wallets: Wallet[];
+};
+
 /** Cursor-paginated list envelope. `nextCursor` is null on the last page. */
 export type Paginated<T> = {
   items: T[];
