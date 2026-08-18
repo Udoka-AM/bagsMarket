@@ -10,6 +10,7 @@
     "test": "NODE_ENV=test vitest run"
   },
   "dependencies": {
+    "@bagsfm/bags-sdk": "^1.4.2",
     "@bagsmarkets/db": "*",
     "@bagsmarkets/types": "*",
     "@nestjs/common": "^11.1.5",

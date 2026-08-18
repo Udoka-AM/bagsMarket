@@ -108,6 +108,24 @@ export type ActivityEntry = {
 };
 
 /**
+ * A fee position the caller can claim from, as reported by Bags.
+ *
+ * Deliberately not the SDK's own `BagsClaimablePosition`: that is a four-way
+ * union of Meteora pool shapes, and leaking it to the browser would weld our
+ * wire contract to their internal migration states.
+ */
+export type ClaimablePosition = {
+  /** The launched token's mint. */
+  baseMint: string;
+  /** Claimable lamports for this user. String, because lamports are u64. */
+  claimableLamports: TokenAmount;
+  /** Whether the pool has graduated from the bonding curve to a DAMM pool. */
+  isMigrated: boolean;
+  /** Present once we can resolve the mint to a launch we know about. */
+  launchName: string | null;
+};
+
+/**
  * What `GET /me` returns: the caller's profile plus every wallet linked to it.
  *
  * Returned together because the web app needs both on first load — the profile

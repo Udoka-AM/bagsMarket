@@ -52,3 +52,24 @@ The suite has been checked against three deliberate mutations:
 These tests cover the API. They do **not** cover the web app calling it — which
 is exactly the shape of the `/me` bug that shipped: the endpoint was correct and
 nothing invoked it. Closing that needs a browser-level smoke test.
+
+## Bags integration
+
+`src/bags/` puts the SDK behind a `BagsPort` interface with two adapters, chosen
+at startup:
+
+| Condition | Adapter | `source` |
+| --- | --- | --- |
+| `BAGS_API_KEY` **and** `HELIUS_RPC_URL` set | `BagsSdkAdapter` | `"bags"` |
+| Either missing | `BagsFixtureAdapter` | `"fixture"` |
+
+The seam exists because the SDK takes the API key as a *required constructor
+argument* — without one there is nothing to inject at all, so the feature would
+otherwise be dark rather than merely keyless.
+
+Every response carries `source`, and the dashboard shows a banner when it is
+`"fixture"`. Invented numbers must never read as real ones.
+
+**The live adapter has never run against the real API.** It typechecks against
+the SDK's own types, so the mapping is compiler-checked, but its runtime
+behaviour is unverified. The first run with a real key is the test.

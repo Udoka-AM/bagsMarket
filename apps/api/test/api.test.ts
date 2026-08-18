@@ -199,6 +199,52 @@ describe("GET /launches", () => {
   });
 });
 
+describe("GET /positions", () => {
+  it("requires authentication", async () => {
+    await request(app.getHttpServer()).get("/positions").expect(401);
+  });
+
+  it("reports the fixture source when no Bags key is configured", async () => {
+    // The suite runs without BAGS_API_KEY, so this is the path the app takes
+    // today. The marker is what stops invented numbers being shown as real.
+    const token = await auth.token({ sub: ALICE });
+    const response = await request(app.getHttpServer())
+      .get("/positions")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.source).toBe("fixture");
+  });
+
+  it("returns no positions and a null wallet when the caller has none on file", async () => {
+    await sql`insert into profiles (id) values (${CAROL}) on conflict do nothing`;
+    await sql`delete from wallets where profile_id = ${CAROL}`;
+
+    const token = await auth.token({ sub: CAROL });
+    const response = await request(app.getHttpServer())
+      .get("/positions")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({ items: [], wallet: null });
+  });
+
+  it("queries the wallet on file, not one supplied by the caller", async () => {
+    const token = await auth.token({ sub: BOB, walletAddress: ALICE_WALLET });
+    await request(app.getHttpServer()).get("/me").set("authorization", `Bearer ${token}`);
+
+    const response = await request(app.getHttpServer())
+      .get("/positions")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.wallet).toBe(ALICE_WALLET);
+    expect(response.body.items.length).toBeGreaterThan(0);
+    // Lamports cross the wire as strings; u64 does not survive a JS number.
+    expect(typeof response.body.items[0].claimableLamports).toBe("string");
+  });
+});
+
 describe("GET /jobs", () => {
   it("returns the paginated envelope the web app expects", async () => {
     await sql`insert into jobs (kind, status) values ('apitest.ingest', 'queued')`;

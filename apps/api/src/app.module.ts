@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
+import { BagsModule } from "./bags/bags.module";
+import { PositionsController } from "./bags/positions.controller";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
@@ -24,11 +26,12 @@ import { ProfilesModule } from "./profiles/profiles.module";
     }),
     DatabaseModule,
     AuthModule,
+    BagsModule,
     ProfilesModule,
     LaunchesModule,
     JobsModule
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, PositionsController],
   providers: []
 })
 export class AppModule {}

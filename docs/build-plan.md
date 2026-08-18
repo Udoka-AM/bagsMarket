@@ -90,6 +90,11 @@ Status: in progress — authentication done, Bags and transactions outstanding.
 
 Landed:
 
+- Bags SDK integration seam: `@bagsfm/bags-sdk` behind a `BagsPort` interface,
+  with a live adapter and a fixture adapter chosen at startup by whether
+  `BAGS_API_KEY` and `HELIUS_RPC_URL` are set
+- `GET /positions` (claimable fee positions) and a dashboard that renders them,
+  clearly marked when the data is fixture rather than real
 - Seed script (`npm run db:seed`), idempotent via deterministic `5eed…` ids
 - `GET /launches` scoped to the caller, rendered at `/launches`
 - Supabase wallet sign-in (`signInWithWeb3`, Solana) with a `/sign-in` page
@@ -101,6 +106,26 @@ Landed:
 **Prerequisite for sign-in to work:** Web3 (Solana) must be enabled under
 Authentication → Sign In / Providers in the Supabase dashboard. It is off by
 default, and there is no API for it.
+
+### What the SDK actually offers
+
+Reading `@bagsfm/bags-sdk` changed the plan in three ways:
+
+1. **The API key is a required constructor argument** — `new BagsSDK(apiKey,
+   connection)`. There is no keyless read path, so nothing real can be fetched
+   until `BAGS_API_KEY` exists. It also needs a Solana RPC connection, which is
+   what `HELIUS_RPC_URL` is for; the two are needed together.
+2. **There is no "list my launches" call.** The wallet-centric read is
+   `fee.getAllClaimablePositions(wallet)` — fee positions, not launches. Our
+   `launches` table therefore cannot be populated by asking Bags what a user
+   owns; it will need a different source (creation flow, or indexing by mint).
+3. **Lamports are typed as JS `number`** in the SDK, and u64 exceeds
+   `Number.MAX_SAFE_INTEGER`. Values above ~9.007e15 have already lost precision
+   before reaching us. Our own contract keeps them as strings so we do not
+   compound it.
+
+**The live adapter is unverified.** It typechecks against the SDK, but has never
+run against the real API. Treat the first run with a real key as the test.
 
 Goals:
 
