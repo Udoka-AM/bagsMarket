@@ -19,12 +19,14 @@
     "db:studio": "npm run studio --workspace @bagsmarkets/db",
     "packages:build": "npm run build --workspace @bagsmarkets/types && npm run build --workspace @bagsmarkets/db",
     "test": "npm run test --workspace @bagsmarkets/db",
-    "test:db": "npm run test --workspace @bagsmarkets/db"
+    "test:db": "npm run test --workspace @bagsmarkets/db",
+    "lock:refresh": "bash scripts/lock-refresh.sh"
   },
   "dependencies": {
     "@bagsmarkets/types": "*",
     "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-slot": "1.2.3",
+    "@solana/web3.js": "1.98.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "0.441.0",

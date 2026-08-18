@@ -61,6 +61,7 @@ npm run api:dev
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:studio` | Browse the database |
 | `npm test` | RLS policy tests against a real Postgres (needs `docker compose up -d postgres`) |
+| `npm run lock:refresh` | Rebuild `package-lock.json` with all platforms' native binaries (see below) |
 
 ## Tests and CI
 
@@ -72,6 +73,24 @@ npm test
 GitHub Actions runs lint, typechecks, the RLS suite against a throwaway Postgres,
 and both builds on every push and pull request. See
 [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+### If CI fails on `npm ci`
+
+npm records optional, platform-specific binaries only for the platform that
+resolved them, so a lock file built on macOS can be missing what Linux CI needs.
+The failure is quiet — everything still works locally.
+
+Adding a dependency the normal way (`npm install <pkg>`) is fine: it preserves
+the existing multi-platform entries. But if CI reports `Missing: … from lock
+file` or `Cannot find native binding`, rebuild the lock:
+
+```bash
+npm run lock:refresh
+```
+
+That regenerates it inside glibc Linux and resyncs `node_modules`. Never fix it
+by deleting `package-lock.json` and running `npm install` on macOS — that is the
+thing that causes the problem.
 
 ## Next steps
 
