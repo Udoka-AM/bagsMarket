@@ -20,7 +20,8 @@
     "packages:build": "npm run build --workspace @bagsmarkets/types && npm run build --workspace @bagsmarkets/db",
     "test": "npm run test --workspace @bagsmarkets/db",
     "test:db": "npm run test --workspace @bagsmarkets/db",
-    "lock:refresh": "bash scripts/lock-refresh.sh"
+    "lock:refresh": "bash scripts/lock-refresh.sh",
+    "db:seed": "npm run seed --workspace @bagsmarkets/db"
   },
   "dependencies": {
     "@bagsmarkets/types": "*",

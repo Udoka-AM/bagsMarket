@@ -60,6 +60,7 @@ npm run api:dev
 | `npm run db:generate` | Diff the Drizzle schema into a new migration |
 | `npm run db:migrate` | Apply pending migrations |
 | `npm run db:studio` | Browse the database |
+| `npm run db:seed` | Development fixtures (safe to re-run) |
 | `npm test` | RLS policy tests against a real Postgres (needs `docker compose up -d postgres`) |
 | `npm run lock:refresh` | Rebuild `package-lock.json` with all platforms' native binaries (see below) |
 

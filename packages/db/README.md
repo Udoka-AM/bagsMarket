@@ -69,6 +69,25 @@ The suite has been checked against a deliberately broken policy
 (`ALTER TABLE launches DISABLE ROW LEVEL SECURITY`) and correctly fails five
 tests, including a cross-tenant delete that succeeds when RLS is off.
 
+## Seed data
+
+```bash
+npm run db:seed
+```
+
+Requires `DATABASE_URL`, and a profile must already exist — sign in once first,
+since the profile is created on the first authenticated request.
+
+Every row uses a deterministic id in the `5eed…` range, and the script deletes
+exactly those ids before re-inserting. That is what makes it safe to run against
+a database holding real data: **it cannot touch a row it did not create**, and
+running it three times leaves the same state as running it once. Children
+(`fee_shares`, `alert_events`) cascade from their parents, so they need no ids
+of their own.
+
+`jobs` rows are seeded with `profile_id` null, because system-owned work is the
+case that table exists to model — and the reason it carries no RLS policy.
+
 ## Ownership model
 
 Every domain row carries `profile_id`. Enforcement happens twice:

@@ -65,10 +65,8 @@ Goals:
 - Enable pgvector for later semantic search
 - Prove the web -> API -> Postgres path end to end
 
-Deferred: **seed data**. Every domain table hangs off `profiles`, which hangs off
-Supabase's `auth.users`. Seeding today means fabricating auth users, and that
-scaffolding gets discarded the moment wallet sign-in lands. Revisit in Phase 3,
-when there is a real identity to seed against.
+Seed data was deferred out of this phase and landed in Phase 3, once wallet
+sign-in provided a real profile to own the rows.
 
 Deliverables:
 
@@ -92,6 +90,8 @@ Status: in progress — authentication done, Bags and transactions outstanding.
 
 Landed:
 
+- Seed script (`npm run db:seed`), idempotent via deterministic `5eed…` ids
+- `GET /launches` scoped to the caller, rendered at `/launches`
 - Supabase wallet sign-in (`signInWithWeb3`, Solana) with a `/sign-in` page
 - API auth: JWKS token verification, issuer and audience checks, `AuthGuard`
 - `GET /me`, creating the profile on first authenticated request

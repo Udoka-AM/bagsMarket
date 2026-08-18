@@ -4,6 +4,7 @@ import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
+import { LaunchesModule } from "./launches/launches.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 
 @Module({
@@ -20,6 +21,7 @@ import { ProfilesModule } from "./profiles/profiles.module";
     DatabaseModule,
     AuthModule,
     ProfilesModule,
+    LaunchesModule,
     JobsModule
   ],
   controllers: [HealthController],
