@@ -70,6 +70,13 @@ otherwise be dark rather than merely keyless.
 Every response carries `source`, and the dashboard shows a banner when it is
 `"fixture"`. Invented numbers must never read as real ones.
 
-**The live adapter has never run against the real API.** It typechecks against
-the SDK's own types, so the mapping is compiler-checked, but its runtime
-behaviour is unverified. The first run with a real key is the test.
+The live adapter has been exercised against the real API. Verifying it needed
+two runs, because a wallet with no positions never reaches the mapping code:
+
+1. The signed-in wallet authenticated and returned `[]` — a valid answer, but it
+   proves only the call, not the mapping.
+2. A wallet found via `state.getTopTokensByLifetimeFees()` →
+   `state.getTokenCreators()` held ten real positions, which exercised the
+   mapping proper: `claimableLamports` as a string, `isMigrated` as a boolean.
+
+An empty result is therefore known-good rather than assumed-good.

@@ -124,8 +124,10 @@ Reading `@bagsfm/bags-sdk` changed the plan in three ways:
    before reaching us. Our own contract keeps them as strings so we do not
    compound it.
 
-**The live adapter is unverified.** It typechecks against the SDK, but has never
-run against the real API. Treat the first run with a real key as the test.
+**The live adapter is verified.** With real credentials it authenticates, and
+the mapping was exercised against a wallet holding ten genuine positions —
+`claimableLamports` arrives as a string, `isMigrated` as a boolean, and a wallet
+with nothing claimable correctly returns an empty list rather than an error.
 
 Goals:
 

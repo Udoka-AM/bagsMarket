@@ -7,7 +7,10 @@
     "outDir": "dist",
     "module": "commonjs",
     "moduleResolution": "node",
-    "isolatedModules": false
+    "isolatedModules": false,
+    "types": []
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }
