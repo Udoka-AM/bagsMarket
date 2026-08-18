@@ -12,12 +12,12 @@
 #
 # WHEN TO RUN IT
 #
-# Rarely. A normal `npm install <pkg>` *preserves* the existing multi-platform
-# entries, so day-to-day dependency changes do not need this. Run it when:
-#
-#   - CI fails at `npm ci` with "Missing: <something> from lock file", or
-#   - a step fails with "Cannot find native binding", or
-#   - someone deleted package-lock.json and regenerated it locally.
+# After any dependency change, before pushing. `npm install <pkg>` often
+# preserves the existing multi-platform entries — but not when the new package
+# brings native binaries of its own, and that has broken CI three times:
+# @emnapi/* via sharp, bufferutil via Supabase realtime, and rolldown via the
+# test runner. The failure is invisible locally, which is what makes running
+# this unconditionally cheaper than remembering when it is needed.
 #
 # HOW IT WORKS -- three details, each of which broke a CI run when missed
 #

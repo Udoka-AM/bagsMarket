@@ -81,12 +81,22 @@ npm records optional, platform-specific binaries only for the platform that
 resolved them, so a lock file built on macOS can be missing what Linux CI needs.
 The failure is quiet — everything still works locally.
 
-Adding a dependency the normal way (`npm install <pkg>`) is fine: it preserves
-the existing multi-platform entries. But if CI reports `Missing: … from lock
-file` or `Cannot find native binding`, rebuild the lock:
+**Run this after any dependency change, before pushing:**
 
 ```bash
 npm run lock:refresh
+```
+
+Adding a dependency with `npm install <pkg>` usually preserves the existing
+multi-platform entries — but not when the new package brings native binaries of
+its own, and that has broken CI three times now (`@emnapi/*` via sharp,
+`bufferutil` via Supabase realtime, then the test runner's rolldown bindings).
+Refreshing costs a minute; discovering it in CI costs a round trip.
+
+To confirm before pushing:
+
+```bash
+docker run --rm --platform linux/amd64 -v "$PWD":/w -w /w node:24-slim npm ci
 ```
 
 That regenerates it inside glibc Linux and resyncs `node_modules`. Never fix it
