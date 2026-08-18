@@ -4,7 +4,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Menu, X } from "lucide-react";
 import { Nav } from "./nav";
-import { WalletButton } from "./wallet-button";
+
 
 // Radix handles the focus trap, escape-to-close, and scroll lock that a
 // hand-rolled drawer would otherwise have to reimplement.
@@ -40,12 +40,6 @@ export function MobileNav() {
           </Dialog.Description>
 
           <Nav onNavigate={() => setOpen(false)} />
-
-          {/* The header hides the wallet button below `sm`, so the drawer is the
-              only way to reach it on a phone. */}
-          <div className="mt-auto sm:hidden">
-            <WalletButton />
-          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

@@ -10,8 +10,15 @@ export const env = {
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000",
   posthogKey: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "",
   posthogHost: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com",
-  solanaCluster: process.env.NEXT_PUBLIC_SOLANA_CLUSTER ?? "devnet"
+  solanaCluster: process.env.NEXT_PUBLIC_SOLANA_CLUSTER ?? "devnet",
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""
 } as const;
+
+// Auth is unavailable rather than broken when Supabase is not configured, so
+// the sign-in page can say so instead of throwing on a missing key.
+export const authConfigured =
+  env.supabaseUrl.length > 0 && env.supabaseAnonKey.length > 0;
 
 // Analytics stays off until a key is configured, so local development and
 // preview builds do not emit events.

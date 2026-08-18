@@ -50,7 +50,7 @@ Not included, and deliberately deferred:
 
 ## Phase 2: Core Data Model
 
-Status: in progress
+Status: complete (seed data deliberately deferred, see below)
 
 The decisions behind this phase — Supabase as host, wallet-only identity,
 per-user ownership, Drizzle as schema authority — are recorded in
@@ -87,6 +87,20 @@ Deliverables:
   nullable, so the slice does not depend on authentication existing first.
 
 ## Phase 3: Bags and Solana Integration
+
+Status: in progress — authentication done, Bags and transactions outstanding.
+
+Landed:
+
+- Supabase wallet sign-in (`signInWithWeb3`, Solana) with a `/sign-in` page
+- API auth: JWKS token verification, issuer and audience checks, `AuthGuard`
+- `GET /me`, creating the profile on first authenticated request
+- Middleware gating every `(app)` route, preserving the intended destination
+- Server components forward the access token to the API
+
+**Prerequisite for sign-in to work:** Web3 (Solana) must be enabled under
+Authentication → Sign In / Providers in the Supabase dashboard. It is off by
+default, and there is no API for it.
 
 Goals:
 

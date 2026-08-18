@@ -15,12 +15,14 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.5",
     "@nestjs/platform-express": "^11.1.5",
+    "jose": "^6.2.9",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^11.0.8",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.3.0",
     "eslint": "^9.34.0",
     "typescript": "^5.9.2"

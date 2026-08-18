@@ -27,6 +27,8 @@
     "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-slot": "1.2.3",
     "@solana/web3.js": "1.98.4",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.112.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "0.441.0",

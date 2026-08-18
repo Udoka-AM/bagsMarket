@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/providers/theme";
 import { MobileNav } from "./mobile-nav";
 import { navItems } from "./nav-items";
-import { WalletButton } from "./wallet-button";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 export function Header() {
   const pathname = usePathname();
@@ -23,9 +23,7 @@ export function Header() {
       </h1>
 
       <ThemeToggle />
-      <div className="hidden sm:block">
-        <WalletButton />
-      </div>
+      <SignOutButton />
     </header>
   );
 }

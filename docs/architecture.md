@@ -180,6 +180,31 @@ The first migration creates the extension. No embedding column exists yet.
   wants to schedule, but designing an embedding schema before the corpus exists
   guarantees rework. Phase 5 designs it against real content.
 
+## Phase 3 Decisions
+
+### Access tokens are verified against JWKS, not the JWT secret
+
+Supabase signs access tokens with rotating asymmetric keys (ES256) and publishes
+them at `/auth/v1/.well-known/jwks.json`. The API verifies against that endpoint
+and checks both the issuer and the `authenticated` audience.
+
+- **Why the audience check matters:** the anon and service-role keys are valid
+  JWTs from the same issuer. Without it, either would be accepted as a user
+  session — and the service-role key bypasses RLS.
+- **`SUPABASE_JWT_SECRET` is legacy.** It is the old symmetric secret and does
+  *not* verify these tokens. Reaching for it is the obvious wrong turn here.
+
+### Profiles are created on first authenticated request
+
+Supabase creates the `auth.users` row at sign-in and knows nothing about our
+`profiles` table. Rather than a trigger on a table we do not own, `GET /me`
+inserts the profile if it is missing.
+
+- **Why:** it keeps every write inside our own migrations, and the web app calls
+  `/me` right after sign-in anyway.
+- **Race:** several requests can arrive at once after sign-in, so the insert uses
+  `ON CONFLICT DO NOTHING` rather than a check-then-insert.
+
 ## Key Design Decisions
 
 - Split frontend and backend early so the product can scale without entangling UI and orchestration logic.

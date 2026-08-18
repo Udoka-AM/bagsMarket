@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { getAccessToken } from "@/lib/supabase/server";
 
 /**
  * Thrown when the API is unreachable or answers with a non-2xx status.
@@ -17,14 +18,26 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Calls the API from a server component, forwarding the caller's Supabase
+ * access token when there is one.
+ *
+ * Server-only: it reads the session cookie. The API verifies the token against
+ * Supabase's JWKS and resolves it to a profile.
+ */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${env.apiUrl}${path}`;
+  const token = await getAccessToken();
 
   let response: Response;
   try {
     response = await fetch(url, {
       ...init,
-      headers: { accept: "application/json", ...init?.headers },
+      headers: {
+        accept: "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...init?.headers
+      },
       // Operational data goes stale immediately; never serve it from the cache.
       cache: "no-store"
     });

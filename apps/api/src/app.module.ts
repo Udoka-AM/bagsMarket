@@ -1,8 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
+import { ProfilesModule } from "./profiles/profiles.module";
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { JobsModule } from "./jobs/jobs.module";
       envFilePath: ["../../.env.local", "../../.env"]
     }),
     DatabaseModule,
+    AuthModule,
+    ProfilesModule,
     JobsModule
   ],
   controllers: [HealthController],
