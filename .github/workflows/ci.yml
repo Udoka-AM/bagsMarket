@@ -58,8 +58,10 @@ jobs:
       - run: npm run typecheck --workspace @bagsmarkets/db
       - run: npm run typecheck --workspace @bagsmarkets/types
 
-      # Applies every migration to a clean database before asserting against it,
-      # so a migration that would fail on Supabase fails here first.
+      # Both suites apply every migration to a clean database before asserting
+      # against it, so a migration that would fail on Supabase fails here first.
+      # The API suite additionally mints real ES256 tokens against a local JWKS,
+      # so token verification is exercised rather than stubbed.
       - run: npm run test
 
       - run: npm run build

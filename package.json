@@ -18,10 +18,11 @@
     "db:migrate": "npm run migrate --workspace @bagsmarkets/db",
     "db:studio": "npm run studio --workspace @bagsmarkets/db",
     "packages:build": "npm run build --workspace @bagsmarkets/types && npm run build --workspace @bagsmarkets/db",
-    "test": "npm run test --workspace @bagsmarkets/db",
+    "test": "npm run test:db && npm run test:api",
     "test:db": "npm run test --workspace @bagsmarkets/db",
     "lock:refresh": "bash scripts/lock-refresh.sh",
-    "db:seed": "npm run seed --workspace @bagsmarkets/db"
+    "db:seed": "npm run seed --workspace @bagsmarkets/db",
+    "test:api": "npm run test --workspace @bagsmarkets/api"
   },
   "dependencies": {
     "@bagsmarkets/types": "*",

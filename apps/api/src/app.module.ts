@@ -14,6 +14,10 @@ import { ProfilesModule } from "./profiles/profiles.module";
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+      // Tests set their own environment. Loading the developer's .env.local
+      // would point the suite at the real Supabase project and the real
+      // database — so the file is ignored under test, deliberately.
+      ignoreEnvFile: process.env.NODE_ENV === "test",
       // The repo keeps one env file at the root rather than one per app, so the
       // API reads the same file the web app does.
       envFilePath: ["../../.env.local", "../../.env"]
