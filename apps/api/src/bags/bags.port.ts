@@ -14,6 +14,16 @@ export interface BagsPort {
   /** Fee positions the given wallet can claim from. */
   listClaimablePositions(walletAddress: string): Promise<ClaimablePosition[]>;
 
+  /**
+   * Unsigned transactions that would claim this wallet's fees for one mint,
+   * base64-encoded.
+   *
+   * The API never signs and never broadcasts: it hands transactions to the
+   * browser, the user's wallet signs and sends them, and the resulting
+   * signature comes back to be recorded. Private keys stay in the wallet.
+   */
+  buildClaimTransactions(walletAddress: string, tokenMint: string): Promise<string[]>;
+
   /** Which implementation answered — surfaced so the UI never implies fixtures are real. */
   readonly source: "bags" | "fixture";
 }

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import type { ClaimablePosition } from "@bagsmarkets/types";
 import type { BagsPort } from "./bags.port";
 
@@ -16,6 +17,27 @@ import type { BagsPort } from "./bags.port";
 @Injectable()
 export class BagsFixtureAdapter implements BagsPort {
   readonly source = "fixture" as const;
+
+  async buildClaimTransactions(walletAddress: string, _tokenMint: string): Promise<string[]> {
+    // A structurally real transaction — a zero-lamport self-transfer — rather
+    // than a random string, so serialisation and the browser's deserialisation
+    // are genuinely exercised. It is never broadcast; the claim button is only
+    // reachable when the live adapter is in use.
+    const wallet = new PublicKey(walletAddress);
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({ fromPubkey: wallet, toPubkey: wallet, lamports: 0 })
+    );
+
+    transaction.feePayer = wallet;
+    // A fixed blockhash: fixtures must not vary run to run.
+    transaction.recentBlockhash = "11111111111111111111111111111111";
+
+    return [
+      transaction
+        .serialize({ requireAllSignatures: false, verifySignatures: false })
+        .toString("base64")
+    ];
+  }
 
   async listClaimablePositions(walletAddress: string): Promise<ClaimablePosition[]> {
     // Keyed off the wallet so two different wallets do not show identical

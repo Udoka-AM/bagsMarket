@@ -63,6 +63,9 @@ of application data goes through the API. `packages/db` is server-side only;
 | `GET /positions` | required | Bags claimable fee positions + `source` |
 | `GET /balances` | required | SOL balance per owned wallet |
 | `GET /jobs` | none yet | system job records |
+| `GET /claims` | required | caller's claims |
+| `POST /claims` | required | starts a claim, returns unsigned transactions |
+| `POST /claims/:id/signature` | required | records the signature the wallet produced |
 
 Every authenticated endpoint resolves the wallet from **our own records**, never
 from the request. A caller cannot ask for data belonging to an address they have
@@ -150,6 +153,34 @@ Checked every service. The wallet-centric read is
 needs a different source (the creation flow, or indexing by mint). `/launches`
 currently reads only our own table.
 
+### The API never signs and never broadcasts
+
+`POST /claims` hands **unsigned** transactions to the browser; the user's wallet
+signs and sends them, and the signature comes back to `POST
+/claims/:id/signature`. Private keys never leave the wallet, and the API never
+holds authority to move funds.
+
+The claim row is written **before** the transactions go out, so an abandoned
+claim still leaves a trace. Recording only on success would lose exactly the
+attempts worth seeing — the ones that failed partway.
+
+Two guards, both mutation-tested:
+
+- **One pending claim per mint.** Without it a double-click produces two rows
+  racing to record the same on-chain event.
+- **A claim id is not a capability.** Writes are scoped to the caller, so holding
+  someone else's claim id is not enough to write to it.
+
+`claims.tx_signature` is unique, so replaying a signature is rejected by the
+database rather than quietly recording one event twice.
+
+### `claims.launch_id` is nullable
+
+The schema originally assumed every claim belonged to a launch we knew about.
+Bags reports claimable fees **per mint**, and we only have launch rows for
+launches created here — so most claims have no launch to point at. Migration
+`0004` drops the NOT NULL rather than inventing a placeholder launch.
+
 ### Balance caching is in-memory, not Redis
 
 The dashboard is force-dynamic, so every load would otherwise hit Helius, which
@@ -217,6 +248,17 @@ policy added to the hand-written migration **and** an entry in
 
 Drizzle is the schema authority. Dashboard changes are invisible to it, and the
 next `db:migrate` will disagree with the database.
+
+### The advertised cluster must match the RPC
+
+`NEXT_PUBLIC_SOLANA_CLUSTER` is what the UI shows; `HELIUS_RPC_URL` is where
+transactions execute. These were mismatched — UI said `devnet`, RPC was
+**mainnet** — which is cosmetic while everything is read-only and expensive once
+funds move.
+
+Both now say mainnet, and `BagsModule` **throws at startup** if they disagree
+again. Failing to boot is the correct response: the alternative is signing real
+transactions on a network the UI is not showing.
 
 ### Migrations connect through the pooler
 
@@ -293,6 +335,8 @@ exposed — `.env.local` is gitignored and verified — but rotation is cheap.
 before the move, holding source and a `.env.local` full of live keys. Worth
 deleting.
 
-**Unfinished work.** Bags transaction flows (launch, fee sharing, claiming) are
-the rest of Phase 3. SPL token balances are not read — only SOL. `/jobs` is not
-yet scoped to a profile. No deployment exists.
+**Unfinished work.** Launch creation and fee-sharing transactions are the rest of
+Phase 3; claiming is built but **the real broadcast is unverified** — it needs a
+wallet with an actual claimable position, which the signed-in wallet does not
+have. SPL token balances are not read, only SOL. `/jobs` is not scoped to a
+profile. No deployment exists.

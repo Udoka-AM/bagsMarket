@@ -1,0 +1,1 @@
+ALTER TABLE "claims" ALTER COLUMN "launch_id" DROP NOT NULL;

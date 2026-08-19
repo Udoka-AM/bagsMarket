@@ -61,7 +61,8 @@ export type FeeShare = {
 
 export type Claim = {
   id: string;
-  launchId: string;
+  /** Null when the mint has not been matched to a launch we know about. */
+  launchId: string | null;
   amount: TokenAmount;
   tokenMint: string;
   txSignature: string | null;
@@ -123,6 +124,18 @@ export type ClaimablePosition = {
   isMigrated: boolean;
   /** Present once we can resolve the mint to a launch we know about. */
   launchName: string | null;
+};
+
+/**
+ * What starting a claim returns.
+ *
+ * `transactions` are base64 unsigned transactions for the wallet to sign and
+ * send. The claim row exists in `pending` state from this moment, so a claim
+ * that is started and abandoned is still visible rather than silently lost.
+ */
+export type ClaimDraft = {
+  claimId: string;
+  transactions: string[];
 };
 
 /**

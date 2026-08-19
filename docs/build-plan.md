@@ -90,6 +90,10 @@ Status: in progress — authentication done, Bags and transactions outstanding.
 
 Landed:
 
+- First write path: `POST /claims` returns unsigned transactions for the wallet
+  to sign, `POST /claims/:id/signature` records the result. The API never signs
+  and never broadcasts. Real broadcast is still unverified — it needs a wallet
+  holding a claimable position.
 - `GET /balances` — SOL balance per owned wallet via Helius, with a 15-second
   in-process cache, rendered on the dashboard
 - Bags SDK integration seam: `@bagsfm/bags-sdk` behind a `BagsPort` interface,

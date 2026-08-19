@@ -78,9 +78,11 @@ export const claims = pgTable(
   "claims",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    launchId: uuid("launch_id")
-      .notNull()
-      .references(() => launches.id, { onDelete: "cascade" }),
+    // Nullable: Bags reports claimable fees per mint, and we do not always have
+    // a launch row for that mint — launches we know about are only the ones
+    // created here. The claim stands on its own until a mint can be indexed
+    // back to a launch.
+    launchId: uuid("launch_id").references(() => launches.id, { onDelete: "cascade" }),
     profileId: uuid("profile_id")
       .notNull()
       .references(() => profiles.id, { onDelete: "cascade" }),

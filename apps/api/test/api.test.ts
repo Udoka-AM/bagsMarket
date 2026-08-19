@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
@@ -289,6 +289,132 @@ describe("GET /balances", () => {
       .expect(200);
 
     expect(response.body.items).toEqual([]);
+  });
+});
+
+describe("claims — the first write path", () => {
+  const MINT = "So11111111111111111111111111111111111111112";
+
+  async function signedInBob() {
+    const token = await auth.token({ sub: BOB, walletAddress: ALICE_WALLET });
+    await request(app.getHttpServer()).get("/me").set("authorization", `Bearer ${token}`);
+    return token;
+  }
+
+  beforeEach(async () => {
+    await sql`delete from claims where profile_id = ${BOB}`;
+  });
+
+  it("requires authentication", async () => {
+    await request(app.getHttpServer()).post("/claims").send({ tokenMint: MINT }).expect(401);
+  });
+
+  it("rejects a mint that is not a Solana address", async () => {
+    const token = await signedInBob();
+    await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({ tokenMint: "../../etc/passwd" })
+      .expect(400);
+  });
+
+  it("rejects a missing mint rather than treating it as empty", async () => {
+    const token = await signedInBob();
+    await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({})
+      .expect(400);
+  });
+
+  it("creates a pending claim and returns transactions to sign", async () => {
+    const token = await signedInBob();
+    const response = await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({ tokenMint: MINT })
+      .expect(200);
+
+    expect(response.body.transactions.length).toBeGreaterThan(0);
+    // Base64 that actually decodes — the browser has to deserialise this.
+    expect(Buffer.from(response.body.transactions[0], "base64").length).toBeGreaterThan(0);
+
+    const rows = await sql`select status from claims where id = ${response.body.claimId}`;
+    expect(rows[0].status).toBe("pending");
+  });
+
+  it("refuses a second pending claim for the same mint", async () => {
+    const token = await signedInBob();
+    await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({ tokenMint: MINT })
+      .expect(200);
+
+    // The double-click case: without this, two rows race to record one
+    // on-chain event.
+    await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({ tokenMint: MINT })
+      .expect(409);
+  });
+
+  it("records a signature once, and rejects a replay", async () => {
+    const token = await signedInBob();
+    const draft = await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({ tokenMint: MINT })
+      .expect(200);
+
+    const signature = "5".repeat(88);
+
+    await request(app.getHttpServer())
+      .post(`/claims/${draft.body.claimId}/signature`)
+      .set("authorization", `Bearer ${token}`)
+      .send({ signature })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/claims/${draft.body.claimId}/signature`)
+      .set("authorization", `Bearer ${token}`)
+      .send({ signature })
+      .expect(409);
+  });
+
+  it("does not let one user write to another user's claim", async () => {
+    const bobToken = await signedInBob();
+    const draft = await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${bobToken}`)
+      .send({ tokenMint: MINT })
+      .expect(200);
+
+    // A claim id is not a capability: Alice holding it must not be enough.
+    const aliceToken = await auth.token({ sub: ALICE });
+    await request(app.getHttpServer())
+      .post(`/claims/${draft.body.claimId}/signature`)
+      .set("authorization", `Bearer ${aliceToken}`)
+      .send({ signature: "6".repeat(88) })
+      .expect(404);
+  });
+
+  it("lists only the caller's claims", async () => {
+    const token = await signedInBob();
+    await request(app.getHttpServer())
+      .post("/claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({ tokenMint: MINT })
+      .expect(200);
+
+    const aliceToken = await auth.token({ sub: ALICE });
+    const alice = await request(app.getHttpServer())
+      .get("/claims")
+      .set("authorization", `Bearer ${aliceToken}`)
+      .expect(200);
+
+    expect(alice.body.items).toHaveLength(0);
   });
 });
 

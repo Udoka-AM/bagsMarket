@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
 import { BagsModule } from "./bags/bags.module";
 import { PositionsController } from "./bags/positions.controller";
+import { ClaimsModule } from "./claims/claims.module";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
@@ -30,6 +31,7 @@ import { SolanaModule } from "./solana/solana.module";
     BagsModule,
     ProfilesModule,
     LaunchesModule,
+    ClaimsModule,
     SolanaModule,
     JobsModule
   ],

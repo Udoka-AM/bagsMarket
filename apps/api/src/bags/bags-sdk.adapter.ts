@@ -22,6 +22,21 @@ export class BagsSdkAdapter implements BagsPort {
     return new BagsSdkAdapter(new BagsSDK(apiKey, new Connection(rpcUrl, "confirmed")));
   }
 
+  async buildClaimTransactions(walletAddress: string, tokenMint: string): Promise<string[]> {
+    const transactions = await this.sdk.fee.getClaimTransactions(
+      new PublicKey(walletAddress),
+      new PublicKey(tokenMint)
+    );
+
+    // Serialised unsigned: the wallet supplies the signatures, so requiring
+    // them here would reject every transaction before it ever reaches one.
+    return transactions.map((transaction) =>
+      transaction
+        .serialize({ requireAllSignatures: false, verifySignatures: false })
+        .toString("base64")
+    );
+  }
+
   async listClaimablePositions(walletAddress: string): Promise<ClaimablePosition[]> {
     const positions = await this.sdk.fee.getAllClaimablePositions(new PublicKey(walletAddress));
 
