@@ -23,6 +23,10 @@ beforeAll(async () => {
   // construction, and app.module ignores .env files when NODE_ENV is test.
   process.env.NODE_ENV = "test";
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL!;
+  // Effectively unlimited for the main app. The rate limiter gets its own
+  // instance below with real limits, so the two concerns stay separate.
+  process.env.THROTTLE_BURST_LIMIT = "100000";
+  process.env.THROTTLE_SUSTAINED_LIMIT = "100000";
   process.env.NEXT_PUBLIC_SUPABASE_URL = auth.supabaseUrl;
 
   const { AppModule } = await import("../src/app.module");
@@ -431,6 +435,57 @@ describe("GET /jobs", () => {
     expect(job).toMatchObject({ kind: "apitest.ingest", status: "queued", attempts: 0 });
     // Dates cross the wire as ISO strings, never Date objects.
     expect(job.scheduledFor === null || typeof job.scheduledFor === "string").toBe(true);
+  });
+});
+
+describe("rate limiting", () => {
+  // Its own app instance with a real limit. Sharing the main one would mean
+  // either throttling every other test or testing nothing.
+  let limited: INestApplication;
+
+  beforeAll(async () => {
+    process.env.THROTTLE_BURST_LIMIT = "5";
+    process.env.THROTTLE_BURST_TTL_MS = "10000";
+
+    const { AppModule: Limited } = await import("../src/app.module");
+    const moduleRef = await Test.createTestingModule({ imports: [Limited] }).compile();
+    limited = moduleRef.createNestApplication();
+    await limited.init();
+
+    process.env.THROTTLE_BURST_LIMIT = "100000";
+  });
+
+  afterAll(async () => {
+    await limited.close();
+  });
+
+  it("allows requests up to the limit, then returns 429", async () => {
+    const statuses: number[] = [];
+    for (let i = 0; i < 8; i += 1) {
+      const response = await request(limited.getHttpServer()).get("/health");
+      statuses.push(response.status);
+    }
+
+    // Both halves matter: a limiter that rejected from the first request would
+    // satisfy "we saw a 429" while being completely broken.
+    expect(statuses.slice(0, 5)).toEqual([200, 200, 200, 200, 200]);
+    expect(statuses.slice(5).every((s) => s === 429)).toBe(true);
+  });
+
+  it("sends a standard Retry-After, not only the library's suffixed one", async () => {
+    let throttled: request.Response | undefined;
+    for (let i = 0; i < 10; i += 1) {
+      const response = await request(limited.getHttpServer()).get("/health");
+      if (response.status === 429) {
+        throttled = response;
+        break;
+      }
+    }
+
+    expect(throttled).toBeDefined();
+    // Named throttlers emit Retry-After-burst, which no standard client reads.
+    expect(throttled!.headers["retry-after"]).toBeDefined();
+    expect(Number(throttled!.headers["retry-after"])).toBeGreaterThan(0);
   });
 });
 

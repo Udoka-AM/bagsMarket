@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module";
 import { BagsModule } from "./bags/bags.module";
 import { PositionsController } from "./bags/positions.controller";
 import { ClaimsModule } from "./claims/claims.module";
+import { ProfileThrottlerGuard } from "./common/profile-throttler.guard";
 import { DatabaseModule } from "./database/database.module";
 import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
@@ -26,6 +29,28 @@ import { SolanaModule } from "./solana/solana.module";
       // API reads the same file the web app does.
       envFilePath: ["../../.env.local", "../../.env"]
     }),
+    // Two windows rather than one: the short burst limit absorbs a double-click
+    // or a retry loop, while the longer window is what actually caps sustained
+    // abuse. A single limit has to choose between being useless against scripts
+    // or hostile to normal use.
+    //
+    // Configurable because the right numbers depend on deployment — and because
+    // the test suite issues bursts no real client would.
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          name: "burst",
+          ttl: Number(config.get("THROTTLE_BURST_TTL_MS") ?? 10_000),
+          limit: Number(config.get("THROTTLE_BURST_LIMIT") ?? 30)
+        },
+        {
+          name: "sustained",
+          ttl: Number(config.get("THROTTLE_SUSTAINED_TTL_MS") ?? 60_000),
+          limit: Number(config.get("THROTTLE_SUSTAINED_LIMIT") ?? 200)
+        }
+      ]
+    }),
     DatabaseModule,
     AuthModule,
     BagsModule,
@@ -36,6 +61,10 @@ import { SolanaModule } from "./solana/solana.module";
     JobsModule
   ],
   controllers: [HealthController, PositionsController],
-  providers: []
+  providers: [
+    // Applied globally: a new endpoint is rate-limited by default rather than
+    // by remembering to decorate it.
+    { provide: APP_GUARD, useClass: ProfileThrottlerGuard }
+  ]
 })
 export class AppModule {}

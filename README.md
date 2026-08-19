@@ -103,6 +103,11 @@ That regenerates it inside glibc Linux and resyncs `node_modules`. Never fix it
 by deleting `package-lock.json` and running `npm install` on macOS — that is the
 thing that causes the problem.
 
+## Deploying
+
+See [docs/runbook.md](./docs/runbook.md) — environment, order of operations,
+rollback, and what each startup guard means when it fires.
+
 ## Context
 
 [details.md](./details.md) collects the current state, the decisions behind it,

@@ -206,8 +206,13 @@ expensive the longer they wait:
   Postgres, with migrations applied from empty by drizzle's own migrator. Their
   ability to detect a broken policy has itself been verified.
 
-Still outstanding: API and web unit tests, rate limiting, abuse prevention, and
-the deployment runbook.
+Now also done: rate limiting (`@nestjs/throttler`, IP-keyed, with a standard
+`Retry-After`), CORS that fails closed in production, three startup guards that
+refuse to boot on a misconfiguration, and [the runbook](./runbook.md).
+
+Still outstanding: **CAPTCHA** — blocked on enabling it in the Supabase dashboard,
+since the client needs the resulting site key — and a browser-level smoke test
+covering the web app calling the API.
 
 Goals:
 

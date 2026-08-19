@@ -17,7 +17,7 @@ with their trade-offs see [docs/architecture.md](docs/architecture.md).
 | 1 — Product shell | complete |
 | 2 — Core data model | complete (seed landed in Phase 3) |
 | 3 — Bags and Solana | auth, Bags reads, and balances done; transactions outstanding |
-| 7 — Hardening | CI and tests pulled forward; rate limiting and runbook outstanding |
+| 7 — Hardening | rate limiting, CORS fail-closed, startup guards, runbook done; CAPTCHA and web smoke test outstanding |
 
 **Live infrastructure:** Supabase project `pmfcbbkjxlkggaixpkth` (us-east-1),
 GitHub `el-uno/bagsMarket`, CI green on `main`.
@@ -249,6 +249,37 @@ policy added to the hand-written migration **and** an entry in
 Drizzle is the schema authority. Dashboard changes are invisible to it, and the
 next `db:migrate` will disagree with the database.
 
+### Rate limiting keys on IP, not profile
+
+Per-profile limits would be better — a shared NAT throttles unrelated users
+together, and one account rotating addresses evades an IP limit. It is not
+reachable here: the throttler runs as an `APP_GUARD`, and global guards execute
+**before** route-level ones, so `AuthGuard` has not attached `req.user` yet.
+
+Reading the token in the throttler without verifying it would be worse than
+useless — `sub` would be attacker-controlled, so anyone could mint a fresh
+bucket per request by editing it.
+
+Defaults are 30 per 10s and 200 per 60s, both configurable by env.
+
+The guard also emits a plain **`Retry-After`**. Named throttlers make the library
+emit `Retry-After-burst` / `Retry-After-sustained`, which no standard client,
+proxy, or SDK retry logic reads.
+
+### Three conditions refuse to boot
+
+Each exists because of a real mistake, and each fails at startup rather than in
+production:
+
+1. `CORS_ORIGINS` unset in production.
+2. `CORS_ORIGINS` containing `localhost` in production — almost always a copied
+   `.env` rather than an intent.
+3. `NEXT_PUBLIC_SOLANA_CLUSTER` disagreeing with the network `HELIUS_RPC_URL`
+   points at.
+
+All three are verified by actually running the built API and confirming it
+refuses to start.
+
 ### The advertised cluster must match the RPC
 
 `NEXT_PUBLIC_SOLANA_CLUSTER` is what the UI shows; `HELIUS_RPC_URL` is where
@@ -322,10 +353,12 @@ create** and three runs leave the same state as one.
 
 ## Outstanding
 
-**Before any public deployment.** Web3 accounts carry no email or phone, so
-signup is free to automate — Supabase says so themselves. Today anyone who finds
-a deployed URL can mint unlimited accounts. Needs CAPTCHA, rate limiting
-(`@nestjs/throttler`), and a tightened `CORS_ORIGINS`.
+**Before any public deployment.** Rate limiting, CORS fail-closed, and the
+startup guards are done — see [docs/runbook.md](docs/runbook.md). **CAPTCHA is
+not**, and it is the one that matters most: Web3 accounts carry no email or
+phone, so signup is free to automate. It cannot be wired until CAPTCHA is
+enabled in the Supabase dashboard, because the client needs the site key that
+only exists then.
 
 **Credentials to rotate.** The database password, Bags key, Helius key, and a
 GitHub token all passed through a chat transcript in plain text. Nothing is
