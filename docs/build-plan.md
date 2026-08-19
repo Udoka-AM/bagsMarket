@@ -210,9 +210,11 @@ Now also done: rate limiting (`@nestjs/throttler`, IP-keyed, with a standard
 `Retry-After`), CORS that fails closed in production, three startup guards that
 refuse to boot on a misconfiguration, and [the runbook](./runbook.md).
 
-Still outstanding: **CAPTCHA** — blocked on enabling it in the Supabase dashboard,
-since the client needs the resulting site key — and a browser-level smoke test
-covering the web app calling the API.
+CAPTCHA is now wired too: hCaptcha on `/sign-in`, gating the button and passing
+`options.captchaToken` into `signInWithWeb3`.
+
+Still outstanding: a browser-level smoke test covering the web app calling the
+API.
 
 Goals:
 

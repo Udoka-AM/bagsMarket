@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@bagsmarkets/types": "*",
+    "@hcaptcha/react-hcaptcha": "2.1.0",
     "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-slot": "1.2.3",
     "@solana/web3.js": "1.98.4",

@@ -17,7 +17,7 @@ with their trade-offs see [docs/architecture.md](docs/architecture.md).
 | 1 — Product shell | complete |
 | 2 — Core data model | complete (seed landed in Phase 3) |
 | 3 — Bags and Solana | auth, Bags reads, and balances done; transactions outstanding |
-| 7 — Hardening | rate limiting, CORS fail-closed, startup guards, runbook done; CAPTCHA and web smoke test outstanding |
+| 7 — Hardening | rate limiting, CORS fail-closed, startup guards, runbook, CAPTCHA done; web smoke test outstanding |
 
 **Live infrastructure:** Supabase project `pmfcbbkjxlkggaixpkth` (us-east-1),
 GitHub `el-uno/bagsMarket`, CI green on `main`.
@@ -352,6 +352,17 @@ create** and three runs leave the same state as one.
 ---
 
 ## Outstanding
+
+**hCaptcha is wired but needs a hostname.** The widget renders and gates the
+sign-in button, but hCaptcha warns *"local host detected"* until `localhost` is
+added to the site's allowed hostnames in the hCaptcha dashboard. Verification
+will fail locally until it is.
+
+Tokens are single-use and expire in roughly two minutes, so the widget resets on
+every failed attempt — otherwise a second try fails on a spent token and the
+error blames the wallet for a CAPTCHA problem. The **secret** lives only in the
+Supabase dashboard; Supabase verifies the token server-side, so this repo has no
+use for it and must never contain it.
 
 **Before any public deployment.** Rate limiting, CORS fail-closed, and the
 startup guards are done — see [docs/runbook.md](docs/runbook.md). **CAPTCHA is

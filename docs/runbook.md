@@ -13,10 +13,10 @@ These are not optional. Web3 accounts carry no email or phone, so **creating
 them is free and trivially automated** — a public URL without these is an open
 invitation.
 
-- [ ] **CAPTCHA on Supabase Auth.** Dashboard → Authentication → Settings →
-      enable CAPTCHA (hCaptcha or Turnstile). The web client then passes
-      `options.captchaToken` to `signInWithWeb3`. Not wired yet — it needs the
-      site key that only exists once CAPTCHA is turned on.
+- [ ] **CAPTCHA hostnames.** hCaptcha is wired and the secret is in Supabase, but
+      the site's allowed-hostname list must contain both `localhost` (for
+      development) and the deployed domain. hCaptcha shows *"local host
+      detected"* and refuses to verify otherwise.
 - [ ] **`CORS_ORIGINS` set to the deployed web origin.** The API refuses to
       start in production without it, and refuses if it contains `localhost`.
 - [ ] **`NEXT_PUBLIC_SOLANA_CLUSTER` matches `HELIUS_RPC_URL`.** The API throws
