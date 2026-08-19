@@ -103,6 +103,12 @@ That regenerates it inside glibc Linux and resyncs `node_modules`. Never fix it
 by deleting `package-lock.json` and running `npm install` on macOS — that is the
 thing that causes the problem.
 
+## Context
+
+[details.md](./details.md) collects the current state, the decisions behind it,
+and the traps that have already cost time once — read it before changing
+anything structural.
+
 ## Next steps
 
 See the [build plan](./docs/build-plan.md). Phases 0 and 1 are complete, and

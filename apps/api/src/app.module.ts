@@ -8,6 +8,7 @@ import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
 import { LaunchesModule } from "./launches/launches.module";
 import { ProfilesModule } from "./profiles/profiles.module";
+import { SolanaModule } from "./solana/solana.module";
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ProfilesModule } from "./profiles/profiles.module";
     BagsModule,
     ProfilesModule,
     LaunchesModule,
+    SolanaModule,
     JobsModule
   ],
   controllers: [HealthController, PositionsController],

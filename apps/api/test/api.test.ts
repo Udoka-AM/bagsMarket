@@ -245,6 +245,53 @@ describe("GET /positions", () => {
   });
 });
 
+describe("GET /balances", () => {
+  it("requires authentication", async () => {
+    await request(app.getHttpServer()).get("/balances").expect(401);
+  });
+
+  it("returns an entry per owned wallet, and none for other people's", async () => {
+    const token = await auth.token({ sub: BOB, walletAddress: ALICE_WALLET });
+    await request(app.getHttpServer()).get("/me").set("authorization", `Bearer ${token}`);
+
+    const response = await request(app.getHttpServer())
+      .get("/balances")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].address).toBe(ALICE_WALLET);
+  });
+
+  it("reports lamports as null rather than zero when the RPC is unavailable", async () => {
+    // The suite runs without HELIUS_RPC_URL. Null and "0" must stay distinct:
+    // one means "we could not find out", the other means "the wallet is empty",
+    // and showing an empty wallet to someone who has funds would be worse than
+    // showing nothing.
+    const token = await auth.token({ sub: BOB, walletAddress: ALICE_WALLET });
+    const response = await request(app.getHttpServer())
+      .get("/balances")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.rpcConfigured).toBe(false);
+    expect(response.body.items[0].lamports).toBeNull();
+  });
+
+  it("returns an empty list when the caller has no wallets", async () => {
+    await sql`insert into profiles (id) values (${CAROL}) on conflict do nothing`;
+    await sql`delete from wallets where profile_id = ${CAROL}`;
+
+    const token = await auth.token({ sub: CAROL });
+    const response = await request(app.getHttpServer())
+      .get("/balances")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    expect(response.body.items).toEqual([]);
+  });
+});
+
 describe("GET /jobs", () => {
   it("returns the paginated envelope the web app expects", async () => {
     await sql`insert into jobs (kind, status) values ('apitest.ingest', 'queued')`;

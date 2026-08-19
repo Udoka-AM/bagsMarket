@@ -126,6 +126,19 @@ export type ClaimablePosition = {
 };
 
 /**
+ * The caller's SOL balance for one wallet.
+ *
+ * `lamports` is null when the balance could not be read — no RPC configured, or
+ * the lookup failed. That is deliberately distinct from "0", which is a real
+ * balance, so the UI can say "unavailable" rather than claim the wallet is
+ * empty.
+ */
+export type WalletBalance = {
+  address: string;
+  lamports: TokenAmount | null;
+};
+
+/**
  * What `GET /me` returns: the caller's profile plus every wallet linked to it.
  *
  * Returned together because the web app needs both on first load — the profile

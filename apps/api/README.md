@@ -80,3 +80,17 @@ two runs, because a wallet with no positions never reaches the mapping code:
    mapping proper: `claimableLamports` as a string, `isMigrated` as a boolean.
 
 An empty result is therefore known-good rather than assumed-good.
+
+## Balances
+
+`GET /balances` returns the SOL balance for every wallet the caller owns, read
+through Helius. Addresses come from our own records, never the request.
+
+`lamports` is `null` when the balance could not be read — no RPC configured, or
+the lookup failed — which is deliberately distinct from `"0"`. Telling someone
+with funds that their wallet is empty is worse than telling them nothing.
+
+Balances are cached in-process for 15 seconds. The dashboard is force-dynamic, so
+every page load would otherwise hit the RPC, and Helius bills per request. The
+cache is per-process and lost on restart, so it stops helping once the API runs
+more than one instance — that is the point to move it to Redis.

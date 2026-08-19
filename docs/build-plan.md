@@ -90,6 +90,8 @@ Status: in progress — authentication done, Bags and transactions outstanding.
 
 Landed:
 
+- `GET /balances` — SOL balance per owned wallet via Helius, with a 15-second
+  in-process cache, rendered on the dashboard
 - Bags SDK integration seam: `@bagsfm/bags-sdk` behind a `BagsPort` interface,
   with a live adapter and a fixture adapter chosen at startup by whether
   `BAGS_API_KEY` and `HELIUS_RPC_URL` are set
