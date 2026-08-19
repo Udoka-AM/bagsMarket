@@ -62,6 +62,7 @@ npm run api:dev
 | `npm run db:studio` | Browse the database |
 | `npm run db:seed` | Development fixtures (safe to re-run) |
 | `npm test` | RLS policy tests against a real Postgres (needs `docker compose up -d postgres`) |
+| `npm run lock:check` | Verify the lock still has the Linux binaries CI needs |
 | `npm run lock:refresh` | Rebuild `package-lock.json` with all platforms' native binaries (see below) |
 
 ## Tests and CI

@@ -22,7 +22,8 @@
     "test:db": "npm run test --workspace @bagsmarkets/db",
     "lock:refresh": "bash scripts/lock-refresh.sh",
     "db:seed": "npm run seed --workspace @bagsmarkets/db",
-    "test:api": "npm run test --workspace @bagsmarkets/api"
+    "test:api": "npm run test --workspace @bagsmarkets/api",
+    "lock:check": "bash scripts/lock-check.sh"
   },
   "dependencies": {
     "@bagsmarkets/types": "*",

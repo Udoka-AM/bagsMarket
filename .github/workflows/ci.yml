@@ -43,6 +43,10 @@ jobs:
           node-version: 24
           cache: npm
 
+      # First, so a lock pruned to one platform gives a clear message instead of
+      # an EUSAGE dump listing packages nobody recognises.
+      - run: npm run lock:check
+
       # `npm ci` over `npm install`: it fails loudly when package-lock.json and
       # package.json disagree, instead of quietly resolving something new.
       - run: npm ci

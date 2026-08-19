@@ -221,9 +221,13 @@ locally, which is what makes it quiet. This broke CI twice: `@emnapi/*` (via
 `@img/sharp-wasm32`, from Next) and `@rolldown/binding-linux-x64-gnu` (from
 vitest).
 
+`npm run lock:check` catches this locally — it runs first in CI too, so a pruned
+lock gives a clear message rather than an `EUSAGE` dump. Run it before pushing
+any dependency change.
+
 A normal `npm install <pkg>` **preserves** the multi-platform entries, so routine
-work is fine. When CI fails on `npm ci` with `Missing: … from lock file` or
-`Cannot find native binding`:
+work is fine. When `lock:check` fails, or CI reports `Missing: … from lock file`
+or `Cannot find native binding`:
 
 ```bash
 npm run lock:refresh
