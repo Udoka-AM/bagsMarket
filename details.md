@@ -17,6 +17,7 @@ with their trade-offs see [docs/architecture.md](docs/architecture.md).
 | 1 — Product shell | complete |
 | 2 — Core data model | complete (seed landed in Phase 3) |
 | 3 — Bags and Solana | auth, Bags reads, and balances done; transactions outstanding |
+| 6 — Automation and ops | job runtime, retries, dead-letter done; scheduled/recurring jobs outstanding |
 | 7 — Hardening | rate limiting, CORS fail-closed, startup guards, runbook, CAPTCHA done; web smoke test outstanding |
 
 **Live infrastructure:** Supabase project `pmfcbbkjxlkggaixpkth` (us-east-1),
@@ -62,7 +63,8 @@ of application data goes through the API. `packages/db` is server-side only;
 | `GET /launches` | required | caller's launches |
 | `GET /positions` | required | Bags claimable fee positions + `source` |
 | `GET /balances` | required | SOL balance per owned wallet |
-| `GET /jobs` | none yet | system job records |
+| `GET /jobs` | required | caller's jobs plus system-owned ones |
+| `POST /jobs/reconcile-claims` | required | queues a reconciliation pass |
 | `GET /claims` | required | caller's claims |
 | `POST /claims` | required | starts a claim, returns unsigned transactions |
 | `POST /claims/:id/signature` | required | records the signature the wallet produced |
@@ -252,6 +254,36 @@ policy added to the hand-written migration **and** an entry in
 
 Drizzle is the schema authority. Dashboard changes are invisible to it, and the
 next `db:migrate` will disagree with the database.
+
+### Redis is a queue, Postgres is the history
+
+BullMQ owns scheduling, retries and backoff in Redis. The `jobs` table is the
+durable record: it survives a Redis flush and is what the Workflows page reads.
+Redis is deliberately disposable.
+
+The row is written **before** the queue entry. A job that ran before its record
+existed would have nothing to update; a row with no queue entry is merely a job
+that never started — visible and recoverable.
+
+`failed` and `dead` are different states on purpose. `failed` will be retried;
+`dead` means the attempt budget is spent and nothing further happens without a
+person. A queue that only says "failed" cannot tell you what still needs a human.
+
+Verified against live Redis: a real job goes `queued → succeeded` in about two
+seconds, and a job whose handler throws goes `failed/1 → failed/2 → dead/3` with
+the error preserved and `finished_at` set only once it is genuinely dead.
+
+**The worker runs in the API process.** A separate `apps/worker` is the right
+shape and matters as soon as a job is slow enough to compete with request
+handling, or the two need scaling apart. The seam is the handler map in
+`jobs.worker.ts` — moving out means a new entrypoint, not a rewrite.
+
+### Redis runs on port 63790, not 6379
+
+`docker-compose.yml` maps it there deliberately. Port 6379 on this machine
+belongs to **another project's Redis** (`arc-redis`), and `REDIS_URL` originally
+pointed at it — bagsMarkets jobs would have been written into an unrelated
+project's queue.
 
 ### Rate limiting keys on IP, not profile
 

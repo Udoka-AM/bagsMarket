@@ -181,6 +181,26 @@ Deliverables:
 
 ## Phase 6: Automation and Ops
 
+Status: in progress — the runtime is done, recurring schedules are not.
+
+Landed:
+
+- BullMQ on Redis, with the `jobs` table as the durable record. Redis is a
+  queue; Postgres is the history that survives a flush.
+- Retries with exponential backoff, and a real dead-letter state. `failed` will
+  retry; `dead` means the budget is spent and a person is needed.
+- First real job: `claims.reconcile`, which settles claims that recorded a
+  signature but never had their on-chain outcome checked — claims previously
+  stayed `pending` forever.
+- `GET /jobs` is now authenticated and scoped: the caller's jobs plus
+  system-owned ones, never another user's.
+
+The worker runs in the API process for now. A separate `apps/worker` is the
+right shape once a job is slow enough to compete with request handling.
+
+Still outstanding: recurring schedules (nothing runs on a timer yet — jobs are
+queued on demand), observability beyond the Workflows page, and audit logging.
+
 Goals:
 
 - Add BullMQ or Trigger.dev jobs

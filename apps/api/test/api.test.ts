@@ -43,7 +43,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sql`delete from auth.users where id in (${ALICE}, ${BOB}, ${CAROL})`;
-  await sql`delete from jobs where kind like 'apitest.%'`;
+  await sql`delete from jobs where kind like 'apitest.%' or kind = 'claims.reconcile'`;
   await sql.end();
   await app.close();
   await auth.stop();
@@ -424,9 +424,15 @@ describe("claims — the first write path", () => {
 
 describe("GET /jobs", () => {
   it("returns the paginated envelope the web app expects", async () => {
+    // System-owned (profile_id null), so it is visible to any authenticated
+    // caller — the case this table exists to model.
     await sql`insert into jobs (kind, status) values ('apitest.ingest', 'queued')`;
 
-    const response = await request(app.getHttpServer()).get("/jobs").expect(200);
+    const token = await auth.token({ sub: ALICE });
+    const response = await request(app.getHttpServer())
+      .get("/jobs?limit=100")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
 
     expect(response.body).toHaveProperty("items");
     expect(response.body).toHaveProperty("nextCursor", null);
@@ -435,6 +441,50 @@ describe("GET /jobs", () => {
     expect(job).toMatchObject({ kind: "apitest.ingest", status: "queued", attempts: 0 });
     // Dates cross the wire as ISO strings, never Date objects.
     expect(job.scheduledFor === null || typeof job.scheduledFor === "string").toBe(true);
+  });
+});
+
+describe("jobs", () => {
+  it("requires authentication — it previously did not", async () => {
+    await request(app.getHttpServer()).get("/jobs").expect(401);
+  });
+
+  it("shows the caller's jobs and system jobs, but not another user's", async () => {
+    await sql`insert into profiles (id) values (${ALICE}), (${BOB}) on conflict do nothing`;
+    await sql`insert into jobs (kind, status, profile_id) values ('apitest.alice', 'queued', ${ALICE})`;
+    await sql`insert into jobs (kind, status, profile_id) values ('apitest.bob', 'queued', ${BOB})`;
+    await sql`insert into jobs (kind, status, profile_id) values ('apitest.system', 'queued', null)`;
+
+    const token = await auth.token({ sub: ALICE });
+    const response = await request(app.getHttpServer())
+      .get("/jobs?limit=100")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    const kinds = response.body.items.map((j: { kind: string }) => j.kind);
+    expect(kinds).toContain("apitest.alice");
+    // System-owned work is everyone's business; another user's is not.
+    expect(kinds).toContain("apitest.system");
+    expect(kinds).not.toContain("apitest.bob");
+  });
+
+  it("records a durable row when work is queued, even with no Redis", async () => {
+    // The suite runs without REDIS_URL. The row must still exist: Redis is a
+    // queue, not a history, and a job nobody recorded is a job nobody can see.
+    const token = await auth.token({ sub: ALICE });
+    const response = await request(app.getHttpServer())
+      .post("/jobs/reconcile-claims")
+      .set("authorization", `Bearer ${token}`)
+      .send({})
+      .expect(202);
+
+    expect(response.body.queued).toBe(false);
+    expect(response.body.job.kind).toBe("claims.reconcile");
+    expect(response.body.job.status).toBe("queued");
+
+    const rows = await sql`select max_attempts from jobs where id = ${response.body.job.id}`;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].max_attempts).toBe(3);
   });
 });
 

@@ -70,7 +70,14 @@ export function JobList({ jobs }: { jobs: Job[] }) {
                   {job.status}
                 </span>
               </td>
-              <td className="py-3 pr-4 tabular-nums text-muted-foreground">
+              <td
+                className={cn(
+                  "py-3 pr-4 tabular-nums",
+                  // An exhausted budget is the thing worth spotting: it means
+                  // nothing further will happen without a person.
+                  job.status === "dead" ? "font-medium text-red-600 dark:text-red-400" : "text-muted-foreground"
+                )}
+              >
                 {job.attempts}/{job.maxAttempts}
               </td>
               <td className="py-3 pr-4 text-muted-foreground">{formatTime(job.scheduledFor)}</td>

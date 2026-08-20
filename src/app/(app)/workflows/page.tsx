@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { Job, Paginated } from "@bagsmarkets/types";
 import { JobList } from "@/components/shell/job-list";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ApiError, apiFetch } from "@/lib/api";
 import { env } from "@/lib/env";
@@ -33,11 +32,11 @@ export default async function WorkflowsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="space-y-3">
-        <Badge>Phase 6 - Automation and Ops</Badge>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Workflows</h2>
         <p className="max-w-2xl text-muted-foreground">
-          Agent runs and scheduled jobs, with the retry and dead-letter state that makes them
-          debuggable.
+          Background jobs, with the retry and dead-letter state that makes them debuggable. A job
+          marked <span className="font-medium text-foreground">dead</span> has spent its attempts
+          and will not run again without a person.
         </p>
       </div>
 
