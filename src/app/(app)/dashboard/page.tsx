@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ClaimablePosition, WalletBalance } from "@bagsmarkets/types";
 import { Badge } from "@/components/ui/badge";
+import { ClaimButton } from "@/components/shell/claim-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ApiError, apiFetch } from "@/lib/api";
 

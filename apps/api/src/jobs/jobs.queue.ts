@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Queue } from "bullmq";
 import type { Redis } from "ioredis";
 import { jobs, type Database } from "@bagsmarkets/db";
@@ -14,11 +15,17 @@ export class JobsQueue {
   private readonly logger = new Logger(JobsQueue.name);
   private readonly queue: Queue | null;
 
+  private readonly everyMinutes: number;
+
   constructor(
     @Inject(REDIS) redis: Redis | null,
-    @Inject(DATABASE) private readonly db: Database
+    @Inject(DATABASE) private readonly db: Database,
+    config: ConfigService
   ) {
     this.queue = redis ? new Queue(QUEUE_NAME, { connection: redis }) : null;
+    // Configurable so a deployment can slow it down; five minutes is a
+    // compromise between settling promptly and not hammering the RPC.
+    this.everyMinutes = Number(config.get("RECONCILE_EVERY_MINUTES") ?? 5);
   }
 
   get enabled() {
@@ -71,6 +78,37 @@ export class JobsQueue {
     );
 
     return row;
+  }
+
+  /**
+   * Registers the recurring work.
+   *
+   * `upsertJobScheduler` is idempotent on the scheduler id, so every API
+   * instance calling this on boot converges on one schedule rather than N.
+   *
+   * Reconciliation has to be on a timer: a claim records its signature and then
+   * nothing looks at the chain again. Without this, claims sit `pending`
+   * forever and the user never learns whether their fees arrived.
+   */
+  async registerSchedules() {
+    if (!this.queue) {
+      return;
+    }
+
+    const everyMs = Number(this.everyMinutes) * 60_000;
+
+    await this.queue.upsertJobScheduler(
+      "claims.reconcile.recurring",
+      { every: everyMs },
+      {
+        name: "claims.reconcile",
+        // No jobRowId and no profileId: the worker creates the durable row for
+        // scheduler-originated runs, and a system-wide pass covers every user.
+        data: {}
+      }
+    );
+
+    this.logger.log(`Scheduled claims.reconcile every ${this.everyMinutes} minutes`);
   }
 
   async close() {

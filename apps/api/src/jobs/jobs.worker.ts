@@ -10,6 +10,7 @@ import type { Redis } from "ioredis";
 import { eq, jobs, type Database } from "@bagsmarkets/db";
 import { DATABASE } from "../database/database.module";
 import { ReconcileClaimsHandler } from "./handlers/reconcile-claims.handler";
+import { JobsQueue } from "./jobs.queue";
 import { QUEUE_NAME, type JobKind } from "./job-kinds";
 import { REDIS } from "./redis.module";
 
@@ -21,7 +22,8 @@ export class JobsWorker implements OnModuleInit, OnApplicationShutdown {
   constructor(
     @Inject(REDIS) private readonly redis: Redis | null,
     @Inject(DATABASE) private readonly db: Database,
-    private readonly reconcileClaims: ReconcileClaimsHandler
+    private readonly reconcileClaims: ReconcileClaimsHandler,
+    private readonly queue: JobsQueue
   ) {}
 
   /**
@@ -49,7 +51,26 @@ export class JobsWorker implements OnModuleInit, OnApplicationShutdown {
       void this.recordFailure(job, error);
     });
 
+    // Registered after the worker exists, so the first scheduled run has
+    // something to process rather than sitting in the queue.
+    void this.queue.registerSchedules();
+
     this.logger.log("Job worker started");
+  }
+
+  private async createRowFor(kind: JobKind): Promise<string> {
+    const [row] = await this.db
+      .insert(jobs)
+      .values({
+        kind,
+        profileId: null,
+        status: "running",
+        maxAttempts: 3,
+        scheduledFor: new Date()
+      })
+      .returning();
+
+    return row.id;
   }
 
   private handlerFor(kind: JobKind) {
@@ -65,8 +86,15 @@ export class JobsWorker implements OnModuleInit, OnApplicationShutdown {
   }
 
   private async process(job: Job) {
-    const { jobRowId, ...payload } = job.data as { jobRowId: string } & Record<string, unknown>;
+    const { jobRowId: existingRowId, ...payload } = job.data as {
+      jobRowId?: string;
+    } & Record<string, unknown>;
     const kind = job.name as JobKind;
+
+    // Scheduler-originated runs arrive without a row, because nothing called
+    // enqueue() for them. Creating it here keeps every run visible on the
+    // Workflows page rather than only the ones a user triggered.
+    const jobRowId = existingRowId ?? (await this.createRowFor(kind));
 
     await this.db
       .update(jobs)

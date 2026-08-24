@@ -23,6 +23,15 @@ beforeAll(async () => {
   // construction, and app.module ignores .env files when NODE_ENV is test.
   process.env.NODE_ENV = "test";
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL!;
+
+  // Cleared, not merely unset in .env: ConfigModule ignores .env *files* under
+  // test, but ambient process.env still reaches it. A developer who sources
+  // .env.local and then runs the suite would otherwise point these tests at
+  // live Redis and the real Bags API, and the failures look like code bugs
+  // rather than a leaked environment.
+  delete process.env.REDIS_URL;
+  delete process.env.BAGS_API_KEY;
+  delete process.env.HELIUS_RPC_URL;
   // Effectively unlimited for the main app. The rate limiter gets its own
   // instance below with real limits, so the two concerns stay separate.
   process.env.THROTTLE_BURST_LIMIT = "100000";
