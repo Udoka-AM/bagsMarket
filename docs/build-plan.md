@@ -198,8 +198,11 @@ Landed:
 The worker runs in the API process for now. A separate `apps/worker` is the
 right shape once a job is slow enough to compete with request handling.
 
-Still outstanding: recurring schedules (nothing runs on a timer yet — jobs are
-queued on demand), observability beyond the Workflows page, and audit logging.
+Recurring schedules now exist: `claims.reconcile` runs every
+`RECONCILE_EVERY_MINUTES` (default 5) via a BullMQ job scheduler, verified firing
+unattended against live Redis.
+
+Still outstanding: observability beyond the Workflows page, and audit logging.
 
 Goals:
 

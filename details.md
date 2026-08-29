@@ -17,7 +17,7 @@ with their trade-offs see [docs/architecture.md](docs/architecture.md).
 | 1 — Product shell | complete |
 | 2 — Core data model | complete (seed landed in Phase 3) |
 | 3 — Bags and Solana | auth, Bags reads, and balances done; transactions outstanding |
-| 6 — Automation and ops | job runtime, retries, dead-letter done; scheduled/recurring jobs outstanding |
+| 6 — Automation and ops | job runtime, retries, dead-letter, recurring schedule done; observability and audit logging outstanding |
 | 7 — Hardening | rate limiting, CORS fail-closed, startup guards, runbook, CAPTCHA done; web smoke test outstanding |
 
 **Live infrastructure:** Supabase project `pmfcbbkjxlkggaixpkth` (us-east-1),
@@ -255,6 +255,33 @@ policy added to the hand-written migration **and** an entry in
 Drizzle is the schema authority. Dashboard changes are invisible to it, and the
 next `db:migrate` will disagree with the database.
 
+### The claim lifecycle is closed
+
+`claims.reconcile` runs on a BullMQ schedule (default every 5 minutes,
+`RECONCILE_EVERY_MINUTES`). Without it a claim records its signature and nothing
+ever looks at the chain again, so it stays `pending` forever.
+
+`upsertJobScheduler` is idempotent on the scheduler id, so every API instance
+converges on one schedule rather than N.
+
+Scheduler-originated runs arrive with no `jobRowId`, because nothing called
+`enqueue()` for them. The worker creates the durable row itself, so a scheduled
+run is as visible on the Workflows page as a user-triggered one.
+
+Verified unattended against live Redis: a run appeared on its own ~35s after
+boot, system-owned (`profile_id IS NULL`), and reached `succeeded`.
+
+### The claim button is disabled on fixture data
+
+The fixture adapter returns a *structurally real* transaction — a zero-lamport
+self-transfer — so serialisation and the browser's deserialisation are genuinely
+exercised. Signing it would pay a network fee to move nothing, so the button is
+disabled whenever `source` is `"fixture"`.
+
+**Known limitation:** `claims` stores one signature, so a multi-transaction claim
+records only the first, and reconciliation reflects that one. Every claim seen so
+far is single-transaction.
+
 ### Redis is a queue, Postgres is the history
 
 BullMQ owns scheduling, retries and backoff in Redis. The `jobs` table is the
@@ -284,6 +311,16 @@ handling, or the two need scaling apart. The seam is the handler map in
 belongs to **another project's Redis** (`arc-redis`), and `REDIS_URL` originally
 pointed at it — bagsMarkets jobs would have been written into an unrelated
 project's queue.
+
+### The API test suite is hermetic
+
+`NODE_ENV=test` makes `AppModule` ignore `.env` *files*, but ambient
+`process.env` still reaches ConfigModule. The suite therefore deletes
+`REDIS_URL`, `BAGS_API_KEY` and `HELIUS_RPC_URL` before booting the app.
+
+Without that, a developer who sources `.env.local` and then runs the tests points
+them at live Redis and the real Bags API — nine tests fail, and the failures look
+like code bugs rather than a leaked environment. That happened once.
 
 ### Rate limiting keys on IP, not profile
 
