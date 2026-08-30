@@ -150,6 +150,21 @@ Deliverables:
 
 ## Phase 4: Market Intelligence
 
+Status: in progress — GitHub developer signals done, market feeds outstanding.
+
+Landed:
+
+- `watchlist_items` and `signal_snapshots`, with RLS
+- GitHub ingestion on a schedule (`INGEST_EVERY_MINUTES`, default 30), fetching
+  per distinct repository rather than per follower
+- `GET /signals`, watchlist CRUD, and a `/signals` page that replaces the
+  placeholder
+
+Not built: DexScreener and Birdeye price/liquidity feeds. DexScreener needs no
+API key, but its host does not resolve from the sandbox this was developed in —
+the code could be written but not verified, and unverified network code is worse
+than none. Birdeye and X need keys that are not set.
+
 Goals:
 
 - Ingest market data from Birdeye and DexScreener

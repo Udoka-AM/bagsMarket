@@ -12,6 +12,7 @@ import { HealthController } from "./health.controller";
 import { JobsModule } from "./jobs/jobs.module";
 import { LaunchesModule } from "./launches/launches.module";
 import { ProfilesModule } from "./profiles/profiles.module";
+import { SignalsModule } from "./signals/signals.module";
 import { SolanaModule } from "./solana/solana.module";
 
 @Module({
@@ -57,6 +58,7 @@ import { SolanaModule } from "./solana/solana.module";
     ProfilesModule,
     LaunchesModule,
     ClaimsModule,
+    SignalsModule,
     SolanaModule,
     JobsModule
   ],

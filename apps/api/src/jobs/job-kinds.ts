@@ -14,6 +14,14 @@ export type JobPayloads = {
    * to it.
    */
   "claims.reconcile": { profileId?: string };
+
+  /**
+   * Captures a snapshot for every watched repository.
+   *
+   * System-wide rather than per-user: the metrics are public facts, so one run
+   * serves every follower.
+   */
+  "signals.ingest-github": Record<string, never>;
 };
 
 export type JobKind = keyof JobPayloads;

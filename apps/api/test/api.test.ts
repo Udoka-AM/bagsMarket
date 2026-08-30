@@ -52,7 +52,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await sql`delete from auth.users where id in (${ALICE}, ${BOB}, ${CAROL})`;
-  await sql`delete from jobs where kind like 'apitest.%' or kind = 'claims.reconcile'`;
+  await sql`delete from jobs where kind like 'apitest.%' or kind in ('claims.reconcile', 'signals.ingest-github')`;
+  await sql`delete from watchlist_items where profile_id in (${ALICE}, ${BOB}, ${CAROL})`;
+  await sql`delete from signal_snapshots where ref like 'test/%'`;
   await sql.end();
   await app.close();
   await auth.stop();
@@ -450,6 +452,139 @@ describe("GET /jobs", () => {
     expect(job).toMatchObject({ kind: "apitest.ingest", status: "queued", attempts: 0 });
     // Dates cross the wire as ISO strings, never Date objects.
     expect(job.scheduledFor === null || typeof job.scheduledFor === "string").toBe(true);
+  });
+});
+
+describe("watchlist and signals", () => {
+  beforeEach(async () => {
+    await sql`delete from watchlist_items where profile_id in (${ALICE}, ${BOB})`;
+    await sql`delete from signal_snapshots where ref like 'test/%'`;
+  });
+
+  it("requires authentication", async () => {
+    await request(app.getHttpServer()).get("/signals").expect(401);
+    await request(app.getHttpServer()).post("/watchlist").send({ ref: "a/b" }).expect(401);
+  });
+
+  it("rejects anything that is not an owner/repo slug", async () => {
+    const token = await auth.token({ sub: ALICE });
+    for (const ref of ["not-a-slug", "https://github.com/a/b", "../../etc/passwd", ""]) {
+      await request(app.getHttpServer())
+        .post("/watchlist")
+        .set("authorization", `Bearer ${token}`)
+        .send({ ref })
+        .expect(400);
+    }
+  });
+
+  it("adds a repository and refuses a duplicate", async () => {
+    await sql`insert into profiles (id) values (${ALICE}) on conflict do nothing`;
+    const token = await auth.token({ sub: ALICE });
+
+    const created = await request(app.getHttpServer())
+      .post("/watchlist")
+      .set("authorization", `Bearer ${token}`)
+      .send({ ref: "test/repo", label: "Test" })
+      .expect(201);
+
+    expect(created.body).toMatchObject({ kind: "repository", ref: "test/repo" });
+
+    await request(app.getHttpServer())
+      .post("/watchlist")
+      .set("authorization", `Bearer ${token}`)
+      .send({ ref: "test/repo" })
+      .expect(409);
+  });
+
+  it("returns a signal with null metrics before anything is captured", async () => {
+    await sql`insert into profiles (id) values (${ALICE}) on conflict do nothing`;
+    const token = await auth.token({ sub: ALICE });
+
+    await request(app.getHttpServer())
+      .post("/watchlist")
+      .set("authorization", `Bearer ${token}`)
+      .send({ ref: "test/fresh" })
+      .expect(201);
+
+    const response = await request(app.getHttpServer())
+      .get("/signals")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    const signal = response.body.items.find((s: { ref: string }) => s.ref === "test/fresh");
+    // Null, not zeros: nothing has been measured yet, which is different from a
+    // repository with no activity.
+    expect(signal.metrics).toBeNull();
+    expect(signal.capturedAt).toBeNull();
+  });
+
+  it("attaches the latest snapshot, not an older one", async () => {
+    await sql`insert into profiles (id) values (${ALICE}) on conflict do nothing`;
+    const token = await auth.token({ sub: ALICE });
+
+    await request(app.getHttpServer())
+      .post("/watchlist")
+      .set("authorization", `Bearer ${token}`)
+      .send({ ref: "test/history" })
+      .expect(201);
+
+    await sql`insert into signal_snapshots (kind, ref, source, metrics, captured_at)
+              values ('repository', 'test/history', 'github', ${sql.json({ stars: 1 })}, now() - interval '2 hours')`;
+    await sql`insert into signal_snapshots (kind, ref, source, metrics, captured_at)
+              values ('repository', 'test/history', 'github', ${sql.json({ stars: 99 })}, now())`;
+
+    const response = await request(app.getHttpServer())
+      .get("/signals")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+
+    const signal = response.body.items.find((s: { ref: string }) => s.ref === "test/history");
+    expect(signal.metrics.stars).toBe(99);
+  });
+
+  it("never shows a signal for something the caller does not watch", async () => {
+    await sql`insert into profiles (id) values (${ALICE}), (${BOB}) on conflict do nothing`;
+
+    const bobToken = await auth.token({ sub: BOB });
+    await request(app.getHttpServer())
+      .post("/watchlist")
+      .set("authorization", `Bearer ${bobToken}`)
+      .send({ ref: "test/bobs-repo" })
+      .expect(201);
+
+    // Snapshots are shared and carry no owner, so this is the check that
+    // matters: Alice must not see Bob's watched repo just because the snapshot
+    // row exists.
+    await sql`insert into signal_snapshots (kind, ref, source, metrics)
+              values ('repository', 'test/bobs-repo', 'github', ${sql.json({ stars: 5 })})`;
+
+    const aliceToken = await auth.token({ sub: ALICE });
+    const response = await request(app.getHttpServer())
+      .get("/signals")
+      .set("authorization", `Bearer ${aliceToken}`)
+      .expect(200);
+
+    expect(response.body.items.map((s: { ref: string }) => s.ref)).not.toContain("test/bobs-repo");
+  });
+
+  it("does not let one user delete another user's watchlist entry", async () => {
+    await sql`insert into profiles (id) values (${ALICE}), (${BOB}) on conflict do nothing`;
+
+    const bobToken = await auth.token({ sub: BOB });
+    const created = await request(app.getHttpServer())
+      .post("/watchlist")
+      .set("authorization", `Bearer ${bobToken}`)
+      .send({ ref: "test/bobs-only" })
+      .expect(201);
+
+    const aliceToken = await auth.token({ sub: ALICE });
+    await request(app.getHttpServer())
+      .delete(`/watchlist/${created.body.id}`)
+      .set("authorization", `Bearer ${aliceToken}`)
+      .expect(404);
+
+    const still = await sql`select id from watchlist_items where id = ${created.body.id}`;
+    expect(still).toHaveLength(1);
   });
 });
 

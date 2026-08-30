@@ -17,6 +17,7 @@ with their trade-offs see [docs/architecture.md](docs/architecture.md).
 | 1 — Product shell | complete |
 | 2 — Core data model | complete (seed landed in Phase 3) |
 | 3 — Bags and Solana | auth, Bags reads, and balances done; transactions outstanding |
+| 4 — Market intelligence | GitHub developer signals and watchlists done; market feeds (DexScreener/Birdeye) and trend detection outstanding |
 | 6 — Automation and ops | job runtime, retries, dead-letter, recurring schedule done; observability and audit logging outstanding |
 | 7 — Hardening | rate limiting, CORS fail-closed, startup guards, runbook, CAPTCHA done; web smoke test outstanding |
 
@@ -65,6 +66,10 @@ of application data goes through the API. `packages/db` is server-side only;
 | `GET /balances` | required | SOL balance per owned wallet |
 | `GET /jobs` | required | caller's jobs plus system-owned ones |
 | `POST /jobs/reconcile-claims` | required | queues a reconciliation pass |
+| `GET /signals` | required | latest reading per watched repository |
+| `GET /watchlist` | required | caller's watchlist |
+| `POST /watchlist` | required | follow a repository |
+| `DELETE /watchlist/:id` | required | unfollow |
 | `GET /claims` | required | caller's claims |
 | `POST /claims` | required | starts a claim, returns unsigned transactions |
 | `POST /claims/:id/signature` | required | records the signature the wallet produced |
@@ -197,6 +202,25 @@ already in `docker-compose.yml` for the purpose.
 
 ## Traps
 
+### Two DNS traps on this machine
+
+The Supabase **pooler hostname** intermittently fails `getaddrinfo` while
+`dns.resolve4` returns it fine — the same split that made the IPv6 direct host
+unusable. The Postgres driver uses `getaddrinfo`, so migrations fail with
+ENOTFOUND even though the host is healthy.
+
+Workaround that keeps Drizzle as the single migration authority: run the
+programmatic migrator inside a container, which has its own resolver.
+
+```bash
+docker run --rm --dns 8.8.8.8 -v "$PWD":/repo -w /repo \
+  -e DIRECT_URL="$DIRECT_URL" node:24-slim node migrate-in-container.mjs
+```
+
+Separately, `api.dexscreener.com` does not resolve from the sandbox this project
+is developed in, which is why market-price ingestion is not built yet: it could
+be written but never verified.
+
 ### iCloud will corrupt `node_modules`
 
 The repo used to live in `~/Documents`, which iCloud syncs
@@ -276,6 +300,30 @@ Redis socket keeps the Node event loop alive, and BullMQ additionally holds a
 *blocking* connection while waiting for work. Before this was fixed the
 container ignored SIGTERM for 20 seconds and was SIGKILLed (exit 137), cutting
 off whatever was mid-write. It now exits 0 in under a second.
+
+### Signals are shared; watchlists are personal
+
+`signal_snapshots` carries **no `profile_id`**. A public repository's star count
+is the same fact for everyone, so storing it per follower would multiply both
+rows and GitHub API calls by the number of people watching. Ingestion fetches per
+*distinct* ref, not per watchlist entry.
+
+Ownership lives on `watchlist_items`, and `listSignals` builds its result from
+the caller's watchlist — so a user never sees a signal for something they do not
+follow, even though the snapshot row has no owner. That mapping is the security
+control, not the `inArray` filter beside it, which is only an optimisation. Both
+facts are mutation-tested.
+
+`signal_snapshots` therefore gets no RLS policy, for the same reason as `jobs`.
+
+### A repo that cannot be read is skipped, not zeroed
+
+`fetchRepository` returns null on a 404, a rename that will not resolve, or a
+network error. Writing zeros instead would render as a project that died
+overnight, and one dead repo would otherwise fail the whole ingestion run.
+
+`metrics: null` on a signal means *nothing has been captured yet* — the same
+distinction as `lamports: null` versus `"0"`.
 
 ### The claim lifecycle is closed
 

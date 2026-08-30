@@ -16,6 +16,7 @@ export class JobsQueue {
   private readonly queue: Queue | null;
 
   private readonly everyMinutes: number;
+  private readonly ingestEveryMinutes: number;
 
   constructor(
     @Inject(REDIS) redis: Redis | null,
@@ -26,6 +27,7 @@ export class JobsQueue {
     // Configurable so a deployment can slow it down; five minutes is a
     // compromise between settling promptly and not hammering the RPC.
     this.everyMinutes = Number(config.get("RECONCILE_EVERY_MINUTES") ?? 5);
+    this.ingestEveryMinutes = Number(config.get("INGEST_EVERY_MINUTES") ?? 30);
   }
 
   get enabled() {
@@ -108,7 +110,18 @@ export class JobsQueue {
       }
     );
 
-    this.logger.log(`Scheduled claims.reconcile every ${this.everyMinutes} minutes`);
+    // Slower than reconciliation: repository metrics move over days, and every
+    // extra run spends GitHub rate limit for a number that has not changed.
+    await this.queue.upsertJobScheduler(
+      "signals.ingest-github.recurring",
+      { every: Number(this.ingestEveryMinutes) * 60_000 },
+      { name: "signals.ingest-github", data: {} }
+    );
+
+    this.logger.log(
+      `Scheduled claims.reconcile every ${this.everyMinutes} minutes, ` +
+        `signals.ingest-github every ${this.ingestEveryMinutes} minutes`
+    );
   }
 
   async close() {

@@ -9,6 +9,7 @@ import { Worker, type Job } from "bullmq";
 import type { Redis } from "ioredis";
 import { eq, jobs, type Database } from "@bagsmarkets/db";
 import { DATABASE } from "../database/database.module";
+import { IngestGithubHandler } from "../signals/handlers/ingest-github.handler";
 import { ReconcileClaimsHandler } from "./handlers/reconcile-claims.handler";
 import { JobsQueue } from "./jobs.queue";
 import { QUEUE_NAME, type JobKind } from "./job-kinds";
@@ -23,6 +24,7 @@ export class JobsWorker implements OnModuleInit, OnApplicationShutdown {
     @Inject(REDIS) private readonly redis: Redis | null,
     @Inject(DATABASE) private readonly db: Database,
     private readonly reconcileClaims: ReconcileClaimsHandler,
+    private readonly ingestGithub: IngestGithubHandler,
     private readonly queue: JobsQueue
   ) {}
 
@@ -78,6 +80,8 @@ export class JobsWorker implements OnModuleInit, OnApplicationShutdown {
       case "claims.reconcile":
         return (payload: Record<string, unknown>) =>
           this.reconcileClaims.run(payload as { profileId?: string });
+      case "signals.ingest-github":
+        return () => this.ingestGithub.run();
       default:
         // Exhaustive: adding a JobKind without a handler fails the build here
         // rather than dying in the worker at 3am.

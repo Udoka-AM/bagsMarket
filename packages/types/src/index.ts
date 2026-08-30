@@ -151,6 +151,45 @@ export type WalletBalance = {
   lamports: TokenAmount | null;
 };
 
+export type WatchKind = "repository" | "token";
+
+export type WatchlistItem = {
+  id: string;
+  kind: WatchKind;
+  /** A repo slug like "anza-xyz/agave", or a mint address. */
+  ref: string;
+  label: string | null;
+  createdAt: IsoDateTime;
+};
+
+/** Metrics for a watched repository. Null when the last fetch failed. */
+export type RepositoryMetrics = {
+  stars: number;
+  forks: number;
+  openIssues: number;
+  /** Commits in the last 7 days — the "is this alive" number. */
+  commits7d: number;
+  pushedAt: IsoDateTime | null;
+  archived: boolean;
+  language: string | null;
+};
+
+/**
+ * The latest reading for something on the watchlist.
+ *
+ * `metrics` is null when nothing has been captured yet — a watchlist entry
+ * added seconds ago has no data, which is different from a repo with zero
+ * activity.
+ */
+export type Signal = {
+  kind: WatchKind;
+  ref: string;
+  label: string | null;
+  source: string | null;
+  metrics: RepositoryMetrics | null;
+  capturedAt: IsoDateTime | null;
+};
+
 /**
  * What `GET /me` returns: the caller's profile plus every wallet linked to it.
  *
