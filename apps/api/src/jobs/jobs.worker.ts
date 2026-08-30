@@ -159,8 +159,14 @@ export class JobsWorker implements OnModuleInit, OnApplicationShutdown {
     );
   }
 
+  /**
+   * Stops accepting work and lets in-flight jobs finish.
+   *
+   * The queue is closed too — it holds its own connection, and leaving it open
+   * keeps the process alive after the worker has stopped.
+   */
   async onApplicationShutdown() {
-    // Closed before the Redis connection so in-flight jobs finish their writes.
     await this.worker?.close();
+    await this.queue.close();
   }
 }

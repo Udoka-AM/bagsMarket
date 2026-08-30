@@ -1,4 +1,4 @@
-import { Global, Logger, Module, type OnApplicationShutdown } from "@nestjs/common";
+import { Global, Inject, Logger, Module, type OnApplicationShutdown } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import IORedis, { type Redis } from "ioredis";
 
@@ -38,8 +38,25 @@ export const REDIS = Symbol("REDIS");
   exports: [REDIS]
 })
 export class RedisModule implements OnApplicationShutdown {
+  constructor(@Inject(REDIS) private readonly redis: Redis | null) {}
+
+  /**
+   * Closes the Redis connection.
+   *
+   * Like the database pool, an open socket keeps the event loop alive. BullMQ
+   * also holds a *blocking* connection while waiting for work, so this has to
+   * happen or the process hangs until the platform kills it.
+   *
+   * `quit()` rather than `disconnect()`: it lets the server finish the current
+   * command instead of severing mid-write. Errors are swallowed because the
+   * worker may already have closed it, and a shutdown path that throws is worse
+   * than one that is redundant.
+   */
   async onApplicationShutdown() {
-    // The connection is closed by the worker's own shutdown hook, which must
-    // run first so in-flight jobs are not cut off mid-write.
+    try {
+      await this.redis?.quit();
+    } catch {
+      // Already closed.
+    }
   }
 }

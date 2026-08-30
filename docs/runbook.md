@@ -28,6 +28,23 @@ invitation.
 
 ---
 
+## The API needs a persistent process
+
+Railway, Fly or Render — **not Vercel functions**. The BullMQ worker runs inside
+the API process and only works while something is alive to poll the queue. On
+serverless it would start, serve requests, and silently process no jobs at all.
+
+```bash
+docker build -f apps/api/Dockerfile -t bagsmarkets-api .
+```
+
+Built from the repo root, because npm workspaces need the root manifest and lock
+file to resolve `@bagsmarkets/*`.
+
+The container runs Node as PID 1 so it receives SIGTERM directly. That is what
+lets `enableShutdownHooks()` fire and the worker finish in-flight jobs — verified
+by stopping the container and checking it exits **0** rather than 137.
+
 ## Environment
 
 | Variable | Where | Notes |

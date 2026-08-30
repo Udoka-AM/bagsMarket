@@ -40,6 +40,11 @@ async function bootstrap() {
   // origin, so it has no reason to advertise its framework.
   app.getHttpAdapter().getInstance().disable("x-powered-by");
 
+  // Without this, Nest never calls onApplicationShutdown — so the BullMQ worker
+  // would not close on SIGTERM and in-flight jobs would be cut off mid-write.
+  // Every deploy sends SIGTERM, so this matters the moment there is a deploy.
+  app.enableShutdownHooks();
+
   const port = Number(config.get<string>("PORT") ?? 4000);
   await app.listen(port);
 

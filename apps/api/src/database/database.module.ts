@@ -1,4 +1,4 @@
-import { Global, Module, type OnApplicationShutdown } from "@nestjs/common";
+import { Global, Inject, Module, type OnApplicationShutdown } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createDatabase, type Database } from "@bagsmarkets/db";
 
@@ -29,9 +29,19 @@ export const DATABASE = Symbol("DATABASE");
   exports: [DATABASE]
 })
 export class DatabaseModule implements OnApplicationShutdown {
+  constructor(@Inject(DATABASE) private readonly db: Database) {}
+
+  /**
+   * Closes the connection pool.
+   *
+   * postgres-js keeps sockets open, and an open socket keeps the Node event
+   * loop alive — so without this the process never exits on SIGTERM and the
+   * platform escalates to SIGKILL (exit 137), cutting off whatever was still
+   * running.
+   */
   async onApplicationShutdown() {
-    // postgres-js holds the pool open, which keeps the process alive on SIGTERM.
-    // Nothing to close yet beyond the client itself; wired here so the hook
-    // exists before there are several consumers.
+    // A few seconds for in-flight queries, then close regardless: a deploy
+    // will not wait forever, and a stuck query should not block the rollout.
+    await this.db.$client.end({ timeout: 5 });
   }
 }

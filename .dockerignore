@@ -1,0 +1,21 @@
+# Everything the image builds for itself, or must never contain.
+node_modules
+**/node_modules
+**/dist
+.next
+.git
+.github
+
+# Secrets. .env.local holds live keys and the service-role key; it must never
+# reach an image layer.
+.env
+.env.*
+!.env.example
+
+# Test and tooling noise
+**/*.test.ts
+coverage
+docker-compose.yml
+scripts
+*.md
+docs

@@ -255,6 +255,28 @@ policy added to the hand-written migration **and** an entry in
 Drizzle is the schema authority. Dashboard changes are invisible to it, and the
 next `db:migrate` will disagree with the database.
 
+### The API cannot run serverless
+
+The BullMQ worker lives in the API process, so the API must be a long-lived
+container — Railway, Fly, Render. On Vercel functions it would serve requests
+happily and process no jobs at all, which is the kind of failure nobody notices
+until claims stop settling.
+
+`apps/api/Dockerfile` builds it. Node runs as PID 1 so SIGTERM reaches it
+directly.
+
+### Shutdown has to be explicit, twice over
+
+`app.enableShutdownHooks()` is required or Nest never calls
+`onApplicationShutdown` at all — the handlers existed for a while and had simply
+never run.
+
+Then each handler has to actually close something. An open Postgres pool or
+Redis socket keeps the Node event loop alive, and BullMQ additionally holds a
+*blocking* connection while waiting for work. Before this was fixed the
+container ignored SIGTERM for 20 seconds and was SIGKILLed (exit 137), cutting
+off whatever was mid-write. It now exits 0 in under a second.
+
 ### The claim lifecycle is closed
 
 `claims.reconcile` runs on a BullMQ schedule (default every 5 minutes,
